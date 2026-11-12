@@ -1,0 +1,3105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#07080c">
+  <title>Cool New Game</title>
+  <meta name="description" content="Cool New Game is a sidewalk shooter. Strafe, shoot, and upgrade your squad.">
+  <style>
+    :root {
+      --ink: #f4f1ea;
+      --muted: #c9c1b3;
+      --amber: #ffb703;
+      --gold: #ffe08a;
+      --panel: rgba(12, 16, 22, 0.9);
+      --line: rgba(255, 255, 255, 0.12);
+      --danger: #ff6b6b;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      height: 100%;
+    }
+
+    body {
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      color: var(--ink);
+      background: radial-gradient(ellipse at center, #1a2230 0%, #07080c 68%);
+      font: 16px/1.35 "Trebuchet MS", "Segoe UI", sans-serif;
+    }
+
+    button, input { font: inherit; color: inherit; }
+
+    button { cursor: pointer; }
+
+    button:focus-visible,
+    .chip:focus-visible {
+      outline: 2px solid var(--gold);
+      outline-offset: 2px;
+    }
+
+    [hidden] { display: none !important; }
+
+    #stage {
+      position: relative;
+      width: min(100vw, calc(100vh * 9 / 16));
+      height: min(100vh, calc(100vw * 16 / 9));
+      background: #111;
+      overflow: hidden;
+      box-shadow: 0 0 0 2px #000, 0 24px 80px rgba(0, 0, 0, 0.45);
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: none;
+    }
+
+    canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .screen, .overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 4;
+    }
+
+    .screen { overflow: auto; }
+
+    #screen-menu {
+      background: linear-gradient(to bottom, rgba(6, 8, 12, 0.82) 0%, rgba(6, 8, 12, 0.42) 58%, rgba(6, 8, 12, 0.2) 100%);
+    }
+
+    .card {
+      width: min(92%, 380px);
+      margin: 16px auto 28px;
+      padding: 16px 16px 18px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+    }
+
+    .eyebrow {
+      margin: 0;
+      color: var(--amber);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+    }
+
+    h1, h2, h3 { margin: 0; }
+
+    h1 {
+      margin-top: 4px;
+      font-size: 34px;
+      line-height: 0.92;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      text-shadow: 0 3px 0 #000;
+    }
+
+    h2 { font-size: 28px; letter-spacing: 0.04em; text-transform: uppercase; }
+
+    h3 {
+      margin: 12px 0 6px;
+      font-size: 13px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--gold);
+    }
+
+    .lead, .help, .fine, .warn { color: var(--muted); }
+
+    .lead { margin: 8px 0; font-size: 14px; }
+
+    .help, .fine { margin: 10px 0 0; font-size: 12px; }
+
+    .warn { margin: 4px 0 0; font-size: 12px; color: #ffb4b4; }
+
+    .statline { margin: 4px 0; font-weight: 700; }
+
+    .note { min-height: 1.2em; margin: 4px 0 8px; color: var(--gold); font-weight: 700; }
+
+    .field { margin-top: 10px; }
+
+    .field > span, .sheet-head p {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      width: auto;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.06);
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 13px;
+    }
+
+    .chip i {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .chip[aria-pressed="true"] {
+      background: var(--amber);
+      color: #2a1c06;
+      border-color: var(--amber);
+    }
+
+    .chip:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .card > button, .stack > button { width: 100%; margin-top: 8px; }
+
+    .primary, .ghost, .buy, .texty {
+      border-radius: 12px;
+      padding: 11px 12px;
+    }
+
+    .primary {
+      background: linear-gradient(#ffd56a, #f0a202);
+      color: #2a1d08;
+      font-weight: 800;
+      border: 0;
+      box-shadow: 0 4px 0 #8a5a00;
+    }
+
+    .primary:active { transform: translateY(2px); box-shadow: 0 2px 0 #8a5a00; }
+
+    .ghost, .buy, .texty {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--line);
+    }
+
+    .ghost:active, .buy:active, .texty:active { transform: translateY(1px); }
+
+    .check {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-top: 8px;
+      font-size: 14px;
+    }
+
+    #hud {
+      position: absolute;
+      inset: 0;
+      z-index: 3;
+      display: flex;
+      flex-direction: column;
+      padding: 10px 12px 12px;
+      pointer-events: none;
+      text-shadow: 0 2px 0 #000, 0 0 6px #000;
+    }
+
+    .hud-top, .hud-bottom {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      align-items: flex-start;
+    }
+
+    .hud-top strong, #hud-wave {
+      display: block;
+      font-size: 22px;
+      line-height: 1;
+    }
+
+    .hud-label {
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      color: var(--gold);
+    }
+
+    .hud-center { text-align: center; }
+
+    .hud-right { text-align: right; }
+
+    #hud-lives { color: #ff8d8d; font-size: 18px; letter-spacing: 1px; }
+
+    #hud-gems { color: #8ee7ff; font-weight: 800; }
+
+    .hud-bottom {
+      flex-direction: column;
+      align-items: stretch;
+      pointer-events: none;
+      margin-top: auto;
+    }
+
+    .hud-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      align-items: flex-end;
+    }
+
+    .hud-gear { font-weight: 800; }
+
+    .hud-gear span { display: block; }
+
+    .hud-actions { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+
+    .hud-actions button {
+      pointer-events: auto;
+      text-shadow: none;
+      background: rgba(10, 12, 16, 0.78);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    #hint {
+      margin: 0 0 8px;
+      text-align: center;
+      font-size: 13px;
+      font-weight: 800;
+      color: #fff8df;
+    }
+
+    .overlay {
+      display: flex;
+      background: rgba(6, 8, 12, 0.78);
+    }
+
+    .sheet {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      max-height: 100%;
+      padding: 12px 12px 16px;
+    }
+
+    .sheet-head, .pause-card h2 { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; }
+
+    .sheet-head h2 { font-size: 22px; }
+
+    .sheet-head button, .pause-card .texty { width: auto; }
+
+    .points-banner {
+      margin: 8px 0;
+      padding: 8px 10px;
+      border-radius: 12px;
+      background: rgba(255, 183, 3, 0.14);
+      color: var(--gold);
+      font-weight: 800;
+    }
+
+    .sheet-body { overflow: auto; flex: 1; padding-bottom: 8px; }
+
+    .op, .item {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 8px;
+      align-items: center;
+      width: 100%;
+      margin: 0 0 8px;
+      padding: 10px;
+      text-align: left;
+      background: #1c2430;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+    }
+
+    .item { grid-template-columns: 1fr auto; }
+
+    .op-symbol {
+      width: 36px;
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--amber);
+      text-align: center;
+    }
+
+    .op b, .item b { display: block; font-size: 15px; }
+
+    .op small, .item p { display: block; color: var(--muted); font-size: 12px; font-weight: 400; }
+
+    .cost { color: var(--gold); font-weight: 800; white-space: nowrap; }
+
+    .cost.poor { color: var(--danger); }
+
+    .group-label {
+      margin: 12px 0 6px;
+      font-size: 12px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--amber);
+    }
+
+    .pause-card, #screen-over .card { margin-top: 12vh; }
+
+    .big {
+      margin: 6px 0;
+      font-size: 42px;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+    }
+
+    #leaderboard {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    #leaderboard li {
+      display: grid;
+      grid-template-columns: 32px 1fr;
+      gap: 6px;
+      padding: 6px 0;
+      border-bottom: 1px solid var(--line);
+      font-size: 14px;
+    }
+
+    #leaderboard .rank { color: var(--amber); font-weight: 800; }
+
+    #leaderboard .current { background: rgba(255, 183, 3, 0.12); border-radius: 8px; padding-left: 6px; }
+
+    #share-note {
+      min-height: 1.2em;
+      user-select: text;
+      -webkit-user-select: text;
+      color: var(--gold);
+      font-weight: 700;
+    }
+
+    #toast {
+      position: absolute;
+      left: 50%;
+      bottom: 18px;
+      transform: translateX(-50%);
+      z-index: 8;
+      max-width: 90%;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: #141910;
+      color: #f6ffe8;
+      border: 1px solid rgba(180, 220, 120, 0.4);
+      font-size: 13px;
+      font-weight: 700;
+      text-align: center;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="stage">
+    <canvas id="view" width="450" height="800" aria-label="Cool New Game battlefield"></canvas>
+
+    <div id="hud" hidden>
+      <div class="hud-top">
+        <div>
+          <div class="hud-label">Score</div>
+          <strong id="hud-score" data-value="0">0</strong>
+          <div class="hud-label">Points <span id="hud-points" data-value="0">0</span></div>
+        </div>
+        <div class="hud-center">
+          <div class="hud-label">Wave</div>
+          <div id="hud-wave" data-value="1">1</div>
+          <div class="hud-label" id="hud-left">8 left</div>
+        </div>
+        <div class="hud-right">
+          <div id="hud-lives" data-value="3">♥♥♥</div>
+          <div id="hud-gems" data-value="0">◆ 0</div>
+        </div>
+      </div>
+      <div class="hud-bottom">
+        <p id="hint">Line up the road · A/D move · hold Space</p>
+        <div class="hud-row">
+          <div class="hud-gear">
+            <span id="hud-weapon">Pistol</span>
+            <span id="hud-troops">Troops ×1</span>
+          </div>
+          <div class="hud-actions">
+            <button type="button" id="btn-upgrade">Upgrades</button>
+            <button type="button" id="btn-store">Store</button>
+            <button type="button" id="btn-pause">Pause</button>
+            <button type="button" id="btn-mute" data-mute>Sound on</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="screen-menu" class="screen">
+      <div class="card">
+        <p class="eyebrow">Sidewalk shooter</p>
+        <h1>Cool New Game</h1>
+        <p class="lead">Strafe the road. Shoot the march. Divide, multiply, and subtract your way up.</p>
+        <p class="statline" id="menu-best">Best score: 0</p>
+        <p class="statline" id="menu-gems">Gems: 0</p>
+        <p class="note" id="menu-note"></p>
+        <div class="field">
+          <span>Weapon</span>
+          <div id="menu-weapons" class="chips"></div>
+        </div>
+        <div class="field">
+          <span>Skin</span>
+          <div id="menu-skins" class="chips"></div>
+        </div>
+        <div id="menu-tank" class="field"></div>
+        <button type="button" class="primary" id="btn-play">Play</button>
+        <button type="button" class="ghost" id="btn-menu-store">Gem store</button>
+        <button type="button" class="ghost" id="btn-menu-mute" data-mute>Sound on</button>
+        <p class="help">A/D or arrows move · Space shoots · U upgrades · B store · P or Esc pause · M mute. On the upgrade panel: 1 Divide, 2 Multiply Damage, 3 Multiply Fire Rate, 4 Subtract, 5 Tank.</p>
+      </div>
+    </div>
+
+    <div id="screen-pause" class="screen" hidden>
+      <div class="card pause-card">
+        <h2>Paused</h2>
+        <p id="pause-stats" class="statline"></p>
+        <div class="stack">
+          <button type="button" class="primary" id="btn-resume">Resume</button>
+          <button type="button" class="ghost" id="btn-pause-upgrades">Upgrades</button>
+          <button type="button" class="ghost" id="btn-pause-store">Gem store</button>
+          <button type="button" class="ghost" id="btn-end-run">End run</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="screen-upgrade" class="overlay" hidden>
+      <div class="sheet">
+        <div class="sheet-head">
+          <div>
+            <h2>Upgrades</h2>
+            <p>Score stays on the board. Points are what you spend.</p>
+          </div>
+          <button type="button" class="texty" id="btn-upgrade-close">Close</button>
+        </div>
+        <div class="points-banner" id="upgrade-points">Points: 0</div>
+        <div id="upgrade-list" class="sheet-body"></div>
+      </div>
+    </div>
+
+    <div id="screen-store" class="overlay" hidden>
+      <div class="sheet">
+        <div class="sheet-head">
+          <div>
+            <h2>Gem store</h2>
+            <p id="store-balance">Gems: 0</p>
+          </div>
+          <button type="button" class="texty" id="btn-store-close">Close</button>
+        </div>
+        <div id="store-list" class="sheet-body"></div>
+        <button type="button" class="ghost" id="btn-restore">Restore purchases</button>
+        <p class="fine">Browser billing is off. Weapons, troops, and the tank can all be earned by playing. Gem packs use a swappable store adapter.</p>
+      </div>
+    </div>
+
+    <div id="screen-over" class="screen" hidden>
+      <div class="card">
+        <p class="eyebrow">Run over</p>
+        <h2>Game over</h2>
+        <p class="big" id="over-score">0</p>
+        <p id="over-detail"></p>
+        <p id="over-best" class="statline"></p>
+        <h3>Top 5 on this browser</h3>
+        <ol id="leaderboard"></ol>
+        <button type="button" class="primary" id="btn-share">Share</button>
+        <p id="share-note"></p>
+        <div class="stack">
+          <button type="button" class="ghost" id="btn-retry">Play again</button>
+          <button type="button" class="ghost" id="btn-over-store">Gem store</button>
+          <button type="button" class="ghost" id="btn-over-menu">Menu</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="toast" hidden role="status"></div>
+  </div>
+  <noscript>Cool New Game needs JavaScript. Everything is in this file — enable JavaScript and reload.</noscript>
+
+  <script>
+    'use strict';
+
+    /* ============================================================
+     * Cool New Game — sidewalk shooter
+     *
+     * One file, no build. Sections:
+     *   1. Content data (weapons, enemies, skins, product catalog)
+     *   2. Save (localStorage)
+     *   3. Commerce + IapAdapter  ← every item grant goes through here
+     *   4. Run state, simulation, rendering
+     *   5. Screens
+     *
+     * Combat reads unlock flags and the gem wallet. It never calls a
+     * store SDK. Swap the billing adapter with:
+     *   CoolNewGame.setIapAdapter({ purchase, restore })
+     * ============================================================ */
+
+    const VIEW_W = 450;
+    const VIEW_H = 800;
+    const PLAYER_RZ = 0.15;
+    const BREACH_RZ = 0.12;
+    const BULLET_Z = 0.2;
+    const START_LIVES = 3;
+    const MAX_LIVES = 5;
+    const MAX_LIFE_BUYS = 2;
+    const MAX_MULT_RANK = 7;
+    const TANK_ARMOR_MAX = 3;
+    const TANK_REGEN_SECONDS = 12;
+    const SAVE_KEY = 'cool-new-game-v1';
+    const DAILY_ID = 'com.coolnewgame.gems.daily';
+    const DROP_ID = 'com.coolnewgame.gems.drop';
+    const MULT_COST_BASE = 50;
+    const MULT_COST_GROWTH = 1.65;
+    const DAMAGE_STEP = 1.25;
+    const RATE_STEP = 1.18;
+    const DIVIDE_COSTS = [40, 90, 160, 280, 480];
+    const POINT_COSTS = { rifle: 80, shotgun: 200, cannon: 420, tank: 900 };
+    const WEAPON_ORDER = ['pistol', 'rifle', 'shotgun', 'cannon'];
+
+    const WEAPONS = {
+      pistol: {
+        id: 'pistol', name: 'Pistol', damage: 1, rate: 4.5, pellets: 1, spread: 0,
+        speed: 1.7, radius: 0.02, color: '#ffe566', gunLen: 16, shake: 0
+      },
+      rifle: {
+        id: 'rifle', name: 'Rapid Rifle', damage: 1, rate: 9, pellets: 1, spread: 0,
+        speed: 2.05, radius: 0.016, color: '#ffb020', gunLen: 26, shake: 0,
+        productId: 'com.coolnewgame.weapon.machinegun'
+      },
+      shotgun: {
+        id: 'shotgun', name: 'Spread Shotgun', damage: 1, rate: 1.7, pellets: 5, spread: 0.055,
+        speed: 1.55, radius: 0.02, color: '#ffd27a', gunLen: 22, shake: 1.5,
+        productId: 'com.coolnewgame.weapon.shotgun'
+      },
+      cannon: {
+        id: 'cannon', name: 'Heavy Cannon', damage: 4, rate: 1.15, pellets: 1, spread: 0,
+        speed: 1.35, radius: 0.045, color: '#ff7a3c', gunLen: 30, shake: 3.5,
+        splash: 0.2, splashDamage: 2,
+        productId: 'com.coolnewgame.weapon.cannon'
+      }
+    };
+
+    const TANK_WEAPON = {
+      id: 'tank', name: 'Tank Cannon', damage: 6, rate: 1.05, pellets: 1, spread: 0,
+      speed: 1.25, radius: 0.05, color: '#ff5a2a', gunLen: 34, shake: 5,
+      splash: 0.28, splashDamage: 3
+    };
+
+    const ENEMY_TYPES = {
+      grunt: {
+        name: 'Grunt', hp: 1, shield: 0, speed: 0.12, score: 10, gems: 1,
+        hitScale: 1, wobble: 0.015, scale: 1, body: '#6f9a3d', helmet: '#3e5324',
+        skin: '#e0b090', gun: '#222', pack: '#2c241c'
+      },
+      runner: {
+        name: 'Runner', hp: 1, shield: 0, speed: 0.22, score: 20, gems: 1,
+        hitScale: 0.9, wobble: 0.04, scale: 0.86, body: '#e0a23a', helmet: '#b86b22',
+        skin: '#efc3a0', gun: '#3a2a1a', pack: '#8a5a28', lean: true
+      },
+      brute: {
+        name: 'Brute', hp: 6, shield: 0, speed: 0.072, score: 50, gems: 3,
+        hitScale: 1.35, wobble: 0.006, scale: 1.38, body: '#8d2f2f', helmet: '#4a1c1c',
+        skin: '#c9927a', gun: '#1a1a1a', pack: '#3a1515', wide: true
+      },
+      elite: {
+        name: 'Elite', hp: 3, shield: 3, speed: 0.11, score: 80, gems: 4,
+        hitScale: 1.05, wobble: 0.012, scale: 1.05, body: '#6d4ea3', helmet: '#2c2144',
+        skin: '#e6c2a4', gun: '#241833', pack: '#241430'
+      },
+      commander: {
+        name: 'Commander', hp: 14, shield: 5, speed: 0.055, score: 250, gems: 12,
+        hitScale: 1.5, wobble: 0.008, scale: 1.55, body: '#c9a227', helmet: '#f2d56b',
+        skin: '#e8c2a2', gun: '#3a3018', pack: '#6b1d1d', wide: true, cape: true
+      }
+    };
+
+    const SKINS = {
+      default: {
+        id: 'default', name: 'Field Olive', price: 0,
+        helmet: '#3c4654', body: '#4f6b32', pack: '#2c241c', gun: '#1c1c1c', accent: '#d7c39a',
+        tank: '#556b3a', tankDark: '#2d3a22', skin: '#e0b090'
+      },
+      desert: {
+        id: 'desert', name: 'Desert Tan', price: 50, productId: 'com.coolnewgame.skin.desert',
+        helmet: '#c2a36b', body: '#d8b56a', pack: '#8c6239', gun: '#3a2e24', accent: '#f0e2c4',
+        tank: '#c4a36a', tankDark: '#7a5a32', skin: '#efc3a0'
+      },
+      night: {
+        id: 'night', name: 'Night Ops', price: 120, productId: 'com.coolnewgame.skin.night',
+        helmet: '#1d2430', body: '#2a3344', pack: '#12161c', gun: '#0e1014', accent: '#6ec8ff',
+        tank: '#2a3548', tankDark: '#141820', skin: '#d7b49a'
+      },
+      jungle: {
+        id: 'jungle', name: 'Jungle', price: 180, productId: 'com.coolnewgame.skin.jungle',
+        helmet: '#1c2418', body: '#1f4d32', pack: '#101610', gun: '#141414', accent: '#9be36a',
+        tank: '#245c38', tankDark: '#102616', skin: '#e0b090'
+      }
+    };
+
+    const SKIN_ORDER = ['default', 'desert', 'night', 'jungle'];
+
+    /* Product catalog. Hidden rows are earned in play (kills, waves, daily)
+     * and are not listed in the store. iap:true rows are real-money packs;
+     * the browser adapter refuses them until a store SDK is attached. */
+    const PRODUCT_CATALOG = [
+      {
+        id: 'com.coolnewgame.extra_life',
+        name: 'Extra Life',
+        kind: 'consumable',
+        grant: 'life',
+        group: 'life',
+        gemPrice: 25,
+        blurb: 'Add one life this run. Cap: 2 bought lives per run, and 5 lives held.'
+      },
+      {
+        id: 'com.coolnewgame.weapon.machinegun',
+        name: 'Rapid Rifle',
+        kind: 'nonconsumable',
+        grant: 'weapon',
+        group: 'weapon',
+        weaponId: 'rifle',
+        gemPrice: 100,
+        blurb: 'A fast rifle. Also unlocks by clearing wave 2, or by Subtracting points in a run.'
+      },
+      {
+        id: 'com.coolnewgame.weapon.shotgun',
+        name: 'Spread Shotgun',
+        kind: 'nonconsumable',
+        grant: 'weapon',
+        group: 'weapon',
+        weaponId: 'shotgun',
+        gemPrice: 175,
+        blurb: 'Five pellets. Also unlocks by clearing wave 4.'
+      },
+      {
+        id: 'com.coolnewgame.weapon.cannon',
+        name: 'Heavy Cannon',
+        kind: 'nonconsumable',
+        grant: 'weapon',
+        group: 'weapon',
+        weaponId: 'cannon',
+        gemPrice: 250,
+        blurb: 'Slow shells with a blast. Also unlocks by clearing wave 7.'
+      },
+      {
+        id: 'com.coolnewgame.troops.multiplier',
+        name: 'Troop Multiplier',
+        kind: 'nonconsumable',
+        grant: 'troops',
+        group: 'troops',
+        gemPrice: 150,
+        blurb: 'New runs start with 2 soldiers, and Divide can reach 6. Also unlocks by clearing wave 6.'
+      },
+      {
+        id: 'com.coolnewgame.tank',
+        name: 'Tank',
+        kind: 'nonconsumable',
+        grant: 'tank',
+        group: 'tank',
+        gemPrice: 500,
+        blurb: 'Armor and a cannon. Also unlocks by clearing wave 10, or by spending points from wave 4.'
+      },
+      {
+        id: 'com.coolnewgame.skin.desert',
+        name: 'Desert Tan',
+        kind: 'nonconsumable',
+        grant: 'skin',
+        group: 'skin',
+        skinId: 'desert',
+        gemPrice: 50,
+        blurb: 'Tan armor for the squad and the tank.'
+      },
+      {
+        id: 'com.coolnewgame.skin.night',
+        name: 'Night Ops',
+        kind: 'nonconsumable',
+        grant: 'skin',
+        group: 'skin',
+        skinId: 'night',
+        gemPrice: 120,
+        blurb: 'Dark kit with a blue visor light.'
+      },
+      {
+        id: 'com.coolnewgame.skin.jungle',
+        name: 'Jungle',
+        kind: 'nonconsumable',
+        grant: 'skin',
+        group: 'skin',
+        skinId: 'jungle',
+        gemPrice: 180,
+        blurb: 'Deep green with a bright strap.'
+      },
+      {
+        id: 'com.coolnewgame.gems.100',
+        name: '100 Gems',
+        kind: 'consumable',
+        grant: 'gems',
+        group: 'gems',
+        gemAmount: 100,
+        iap: true,
+        blurb: 'Small gem pack. Placeholder product — this build has no store billing.'
+      },
+      {
+        id: 'com.coolnewgame.gems.550',
+        name: '550 Gems',
+        kind: 'consumable',
+        grant: 'gems',
+        group: 'gems',
+        gemAmount: 550,
+        iap: true,
+        blurb: 'Medium gem pack. Placeholder product.'
+      },
+      {
+        id: 'com.coolnewgame.gems.1200',
+        name: '1200 Gems',
+        kind: 'consumable',
+        grant: 'gems',
+        group: 'gems',
+        gemAmount: 1200,
+        iap: true,
+        blurb: 'Large gem pack. Placeholder product.'
+      },
+      {
+        id: DROP_ID,
+        name: 'Battle gems',
+        kind: 'consumable',
+        grant: 'gems',
+        gemAmount: 1,
+        hidden: true
+      },
+      {
+        id: DAILY_ID,
+        name: 'Daily reward',
+        kind: 'consumable',
+        grant: 'gems',
+        gemAmount: 20,
+        hidden: true
+      }
+    ];
+
+    const MILESTONES = [
+      { wave: 2, productId: 'com.coolnewgame.weapon.machinegun', text: 'Rapid Rifle unlocked. Subtract points to equip it, or pick it next run.' },
+      { wave: 4, productId: 'com.coolnewgame.weapon.shotgun', text: 'Spread Shotgun unlocked. Subtract points to equip it, or pick it next run.' },
+      { wave: 6, productId: 'com.coolnewgame.troops.multiplier', text: 'Troop multiplier unlocked. New runs start with 2 soldiers.' },
+      { wave: 7, productId: 'com.coolnewgame.weapon.cannon', text: 'Heavy Cannon unlocked. Subtract points to equip it, or pick it next run.' },
+      { wave: 10, productId: 'com.coolnewgame.tank', text: 'Tank unlocked. Deploy it from Upgrades, or start in it next run.' }
+    ];
+
+    const PROPS = [
+      { rx: -1.22, rz: 0.22, kind: 'bush' },
+      { rx: 1.2, rz: 0.36, kind: 'crate' },
+      { rx: -1.18, rz: 0.52, kind: 'rock' },
+      { rx: 1.24, rz: 0.64, kind: 'bush' },
+      { rx: -1.28, rz: 0.78, kind: 'crate' }
+    ];
+
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+    function fmt(n) { return Math.floor(Number(n) || 0).toLocaleString(); }
+    function fmtMult(n) { return '×' + (Math.round(n * 100) / 100).toFixed(2); }
+    function esc(s) {
+      return String(s).replace(/[&<>"']/g, (c) => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      }[c]));
+    }
+    function dayKey(d = new Date()) {
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return d.getFullYear() + '-' + m + '-' + day;
+    }
+    function formatDate(ms) {
+      try {
+        return new Date(ms).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+      } catch (err) {
+        return '';
+      }
+    }
+    function findProduct(id) {
+      return PRODUCT_CATALOG.find((p) => p.id === id) || null;
+    }
+    function $(id) { return document.getElementById(id); }
+
+    function project(rx, rz) {
+      const z = clamp(rz, 0, 1);
+      const horizon = VIEW_H * 0.34;
+      const near = VIEW_H * 0.94;
+      const y = near + (horizon - near) * z;
+      const halfNear = VIEW_W * 0.40;
+      const halfFar = VIEW_W * 0.07;
+      const half = halfNear + (halfFar - halfNear) * z;
+      const x = VIEW_W * 0.5 + rx * half;
+      const scale = 1.15 - z * 0.74;
+      return { x, y, scale, half };
+    }
+
+    function roundRect(x, y, w, h, r) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + w, y, x + w, y + h, r);
+      ctx.arcTo(x + w, y + h, x, y + h, r);
+      ctx.arcTo(x, y + h, x, y, r);
+      ctx.arcTo(x, y, x + w, y, r);
+      ctx.closePath();
+    }
+
+    /* ----------------------------------------------------------
+     * Save
+     * ---------------------------------------------------------- */
+
+    function defaultSave() {
+      return {
+        version: 1,
+        gems: 0,
+        unlocks: {
+          weapons: ['pistol'],
+          skins: ['default'],
+          tank: false,
+          troopMultiplier: false
+        },
+        loadout: { weapon: 'pistol', skin: 'default', useTank: false },
+        runs: [],
+        bestScore: 0,
+        lastDaily: null,
+        muted: false
+      };
+    }
+
+    function isRunRecord(row) {
+      return row && Number.isFinite(row.score) && Number.isFinite(row.wave) && Number.isFinite(row.date);
+    }
+
+    function sanitizeSave(raw) {
+      const data = defaultSave();
+      if (!raw || typeof raw !== 'object') return data;
+      data.gems = Math.max(0, Math.floor(Number(raw.gems) || 0));
+      const unlocks = raw.unlocks || {};
+      const weapons = Array.isArray(unlocks.weapons) ? unlocks.weapons.filter((id) => WEAPONS[id]) : [];
+      if (!weapons.includes('pistol')) weapons.unshift('pistol');
+      data.unlocks.weapons = [...new Set(weapons)];
+      const skins = Array.isArray(unlocks.skins) ? unlocks.skins.filter((id) => SKINS[id]) : [];
+      if (!skins.includes('default')) skins.unshift('default');
+      data.unlocks.skins = [...new Set(skins)];
+      data.unlocks.tank = !!unlocks.tank;
+      data.unlocks.troopMultiplier = !!unlocks.troopMultiplier;
+      const loadout = raw.loadout || {};
+      data.loadout.weapon = data.unlocks.weapons.includes(loadout.weapon) ? loadout.weapon : 'pistol';
+      data.loadout.skin = data.unlocks.skins.includes(loadout.skin) ? loadout.skin : 'default';
+      data.loadout.useTank = !!(loadout.useTank && data.unlocks.tank);
+      data.runs = (Array.isArray(raw.runs) ? raw.runs.filter(isRunRecord) : [])
+        .map((row) => ({
+          id: String(row.id || row.date),
+          score: Math.max(0, Math.floor(row.score)),
+          wave: Math.max(1, Math.floor(row.wave)),
+          kills: Math.max(0, Math.floor(row.kills || 0)),
+          date: row.date,
+          weapon: row.weapon === 'tank' || WEAPONS[row.weapon] ? row.weapon : 'pistol',
+          tank: !!row.tank
+        }))
+        .sort((a, b) => b.score - a.score || b.date - a.date)
+        .slice(0, 5);
+      data.bestScore = data.runs.length ? data.runs[0].score : Math.max(0, Math.floor(Number(raw.bestScore) || 0));
+      data.lastDaily = typeof raw.lastDaily === 'string' ? raw.lastDaily : null;
+      data.muted = !!raw.muted;
+      return data;
+    }
+
+    const Save = {
+      data: defaultSave(),
+      load() {
+        try {
+          const raw = localStorage.getItem(SAVE_KEY);
+          this.data = raw ? sanitizeSave(JSON.parse(raw)) : defaultSave();
+        } catch (err) {
+          console.warn('Could not read the save.', err);
+          this.data = defaultSave();
+        }
+      },
+      persist() {
+        try {
+          localStorage.setItem(SAVE_KEY, JSON.stringify(this.data));
+        } catch (err) {
+          console.warn('Could not write the save.', err);
+        }
+      }
+    };
+
+    /* ----------------------------------------------------------
+     * Commerce + IapAdapter
+     *
+     * grantReward() is the only function that adds gems, lives,
+     * weapons, the troop multiplier, the tank, or skins.
+     *
+     * BrowserIapAdapter logs the product id and returns
+     * status: 'iap_unavailable'. A future Capacitor / StoreKit /
+     * Play Billing adapter should implement:
+     *   purchase(productId) -> { ok, status, productId, receipt? }
+     *   restore()           -> { ok, status, productIds?: string[] }
+     * status: 'success' | 'iap_unavailable' | 'cancelled' | 'failed'
+     *
+     * When real money is involved, verify the receipt on a server
+     * you control, then call grantReward(productId, { source: 'iap' }).
+     * Do not grant from an unchecked client flag. Restore should
+     * return owned non-consumable product ids only; consumable gem
+     * packs and extra lives are not restored.
+     * ---------------------------------------------------------- */
+
+    const BrowserIapAdapter = {
+      name: 'browser-stub',
+      async purchase(productId) {
+        console.log('[IapAdapter] purchase', productId);
+        return { ok: false, status: 'iap_unavailable', productId };
+      },
+      async restore() {
+        console.log('[IapAdapter] restore');
+        return { ok: false, status: 'iap_unavailable' };
+      }
+    };
+
+    function alreadyOwned(product) {
+      const unlocks = Save.data.unlocks;
+      switch (product.grant) {
+        case 'weapon': return unlocks.weapons.includes(product.weaponId);
+        case 'skin': return unlocks.skins.includes(product.skinId);
+        case 'tank': return unlocks.tank;
+        case 'troops': return unlocks.troopMultiplier;
+        default: return false;
+      }
+    }
+
+    const Commerce = {
+      adapter: BrowserIapAdapter,
+      bridge: null,
+      setBridge(bridge) { this.bridge = bridge; },
+      setIapAdapter(adapter) {
+        if (!adapter || typeof adapter.purchase !== 'function' || typeof adapter.restore !== 'function') {
+          console.error('[IapAdapter] refused adapter, expected purchase() and restore()');
+          return false;
+        }
+        this.adapter = adapter;
+        return true;
+      },
+      grantReward(productId, options = {}) {
+        const product = findProduct(productId);
+        if (!product) return { ok: false, status: 'unknown_product', productId };
+        const source = options.source || 'grant';
+        let newly = false;
+        let amount = 0;
+
+        switch (product.grant) {
+          case 'gems': {
+            if (product.id === DAILY_ID) {
+              const today = dayKey();
+              if (Save.data.lastDaily === today) {
+                return { ok: false, status: 'already_claimed', productId, source };
+              }
+              Save.data.lastDaily = today;
+              amount = product.gemAmount;
+              newly = true;
+            } else {
+              amount = Math.floor(Number(options.gems != null ? options.gems : product.gemAmount));
+              if (!Number.isFinite(amount) || amount <= 0) {
+                return { ok: false, status: 'bad_amount', productId };
+              }
+              newly = true;
+            }
+            Save.data.gems += amount;
+            break;
+          }
+          case 'life': {
+            if (!this.bridge || !this.bridge.addLife()) {
+              return {
+                ok: false,
+                status: 'unavailable',
+                productId,
+                message: lifeBlockReason() || 'Life not available.'
+              };
+            }
+            newly = true;
+            break;
+          }
+          case 'weapon': {
+            if (!Save.data.unlocks.weapons.includes(product.weaponId)) {
+              Save.data.unlocks.weapons.push(product.weaponId);
+              newly = true;
+            }
+            if (source === 'gems' || source === 'iap' || source === 'points') {
+              Save.data.loadout.weapon = product.weaponId;
+              if (this.bridge) this.bridge.equipWeapon(product.weaponId);
+            }
+            break;
+          }
+          case 'troops': {
+            if (!Save.data.unlocks.troopMultiplier) {
+              Save.data.unlocks.troopMultiplier = true;
+              newly = true;
+              if (this.bridge) this.bridge.onTroopMultiplier();
+            }
+            break;
+          }
+          case 'tank': {
+            if (!Save.data.unlocks.tank) {
+              Save.data.unlocks.tank = true;
+              newly = true;
+            }
+            if ((source === 'gems' || source === 'iap') && this.bridge) this.bridge.onTankPurchased();
+            break;
+          }
+          case 'skin': {
+            if (!Save.data.unlocks.skins.includes(product.skinId)) {
+              Save.data.unlocks.skins.push(product.skinId);
+              newly = true;
+            }
+            if (source === 'gems' || source === 'iap') {
+              Save.data.loadout.skin = product.skinId;
+              if (this.bridge) this.bridge.equipSkin(product.skinId);
+            }
+            break;
+          }
+          default:
+            return { ok: false, status: 'bad_grant', productId };
+        }
+
+        Save.persist();
+        if (this.bridge && this.bridge.onWalletChanged) this.bridge.onWalletChanged();
+        return { ok: true, status: 'granted', productId, source, newly, amount };
+      },
+      async purchase(productId) {
+        const product = findProduct(productId);
+        if (!product || product.hidden) return { ok: false, status: 'unknown_product', productId };
+        if (product.iap) {
+          const result = await this.adapter.purchase(productId);
+          if (result && result.status === 'success') {
+            const granted = this.grantReward(productId, { source: 'iap', receipt: result.receipt });
+            return { ok: !!granted.ok, status: granted.ok ? 'success' : granted.status, productId, granted };
+          }
+          const status = (result && result.status) || 'failed';
+          return {
+            ok: false,
+            status,
+            productId,
+            message: status === 'iap_unavailable'
+              ? 'In-app purchases are not available in this browser build (iap_unavailable).'
+              : (status === 'cancelled' ? 'Purchase cancelled.' : 'Purchase failed.')
+          };
+        }
+        if (alreadyOwned(product)) {
+          return { ok: false, status: 'owned', productId, message: 'Already owned.' };
+        }
+        if (product.grant === 'life') {
+          const reason = lifeBlockReason();
+          if (reason) return { ok: false, status: 'unavailable', productId, message: reason };
+        }
+        const price = product.gemPrice || 0;
+        if (Save.data.gems < price) {
+          return { ok: false, status: 'insufficient_gems', productId, message: 'Not enough gems.' };
+        }
+        Save.data.gems -= price;
+        const granted = this.grantReward(productId, { source: 'gems' });
+        if (!granted.ok) {
+          Save.data.gems += price;
+          Save.persist();
+          if (this.bridge && this.bridge.onWalletChanged) this.bridge.onWalletChanged();
+          return granted;
+        }
+        return { ok: true, status: 'success', productId, granted };
+      },
+      async restore() {
+        const result = await this.adapter.restore();
+        if (result && result.status === 'success' && Array.isArray(result.productIds)) {
+          result.productIds.forEach((id) => {
+            const product = findProduct(id);
+            if (product && product.kind === 'nonconsumable') {
+              this.grantReward(id, { source: 'restore' });
+            }
+          });
+        }
+        return result || { ok: false, status: 'failed' };
+      }
+    };
+
+    /* ----------------------------------------------------------
+     * Run state
+     * ---------------------------------------------------------- */
+
+    const state = {
+      mode: 'menu',
+      stack: [],
+      runActive: false,
+      time: 0,
+      score: 0,
+      points: 0,
+      lives: START_LIVES,
+      livesBought: 0,
+      wave: 1,
+      weaponId: 'pistol',
+      skinId: 'default',
+      troops: 1,
+      damageMult: 1,
+      fireRateMult: 1,
+      dmgRank: 0,
+      rateRank: 0,
+      tankDeployed: false,
+      tankArmor: 0,
+      armorTimer: 0,
+      playerRx: 0,
+      moving: false,
+      invuln: 0,
+      hurtFlash: 0,
+      shake: 0,
+      fireCooldown: 0,
+      shotsFired: 0,
+      kills: 0,
+      runGems: 0,
+      runId: '',
+      toSpawn: 0,
+      spawnTimer: 0,
+      waveBreak: 0,
+      commanderSpawned: false,
+      banner: null,
+      taught: false,
+      intros: {},
+      enemies: [],
+      bullets: [],
+      particles: [],
+      floaters: [],
+      muzzles: [],
+      menuNote: ''
+    };
+
+    const keys = new Set();
+    let toastTimer = 0;
+    let purchaseLock = false;
+    let shareLock = false;
+    let hitSoundQueued = false;
+    let viewScaleX = 1;
+    let viewScaleY = 1;
+
+    const canvas = $('view');
+    const ctx = canvas.getContext('2d', { alpha: false });
+
+    /* ----------------------------------------------------------
+     * Audio (synthesized — no files)
+     * ---------------------------------------------------------- */
+
+    const audio = {
+      ctx: null,
+      ensure() {
+        if (Save.data.muted) return null;
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return null;
+        if (!this.ctx) this.ctx = new AC();
+        if (this.ctx.state === 'suspended') this.ctx.resume();
+        return this.ctx;
+      },
+      tone(freq, dur, type, gain, delay) {
+        const actx = this.ensure();
+        if (!actx) return;
+        const t = actx.currentTime + (delay || 0);
+        const osc = actx.createOscillator();
+        const amp = actx.createGain();
+        osc.type = type || 'square';
+        osc.frequency.setValueAtTime(freq, t);
+        amp.gain.setValueAtTime(gain, t);
+        amp.gain.exponentialRampToValueAtTime(0.001, t + dur);
+        osc.connect(amp);
+        amp.connect(actx.destination);
+        osc.start(t);
+        osc.stop(t + dur + 0.02);
+      },
+      shoot(kind) {
+        if (kind === 'tank' || kind === 'cannon') this.tone(90, 0.12, 'square', 0.05);
+        else if (kind === 'shotgun') this.tone(160, 0.08, 'sawtooth', 0.04);
+        else if (kind === 'rifle') this.tone(880, 0.03, 'square', 0.02);
+        else this.tone(640, 0.04, 'square', 0.025);
+      },
+      hit() { this.tone(340, 0.03, 'triangle', 0.02); },
+      kill() {
+        this.tone(520, 0.05, 'square', 0.03);
+        this.tone(760, 0.07, 'square', 0.025, 0.04);
+      },
+      hurt() { this.tone(80, 0.22, 'sawtooth', 0.05); },
+      ui() { this.tone(520, 0.04, 'sine', 0.03); },
+      upgrade() {
+        this.tone(523, 0.07, 'square', 0.03);
+        this.tone(659, 0.08, 'square', 0.03, 0.07);
+        this.tone(784, 0.1, 'square', 0.03, 0.14);
+      },
+      defeat() { this.tone(140, 0.3, 'sawtooth', 0.04); }
+    };
+
+    /* ----------------------------------------------------------
+     * Economy helpers used by both the sim and the panels
+     * ---------------------------------------------------------- */
+
+    function hpScale(wave) { return 1 + (wave - 1) * 0.18; }
+    function speedScale(wave) { return 1 + (wave - 1) * 0.045; }
+    function spawnInterval(wave) { return Math.max(0.26, 0.92 - wave * 0.04); }
+    function spawnCount(wave) { return 6 + wave * 2; }
+    function troopCap() { return Save.data.unlocks.troopMultiplier ? 6 : 5; }
+    function divideCost(currentTroops) {
+      const index = Math.max(0, currentTroops - 1);
+      return DIVIDE_COSTS[Math.min(index, DIVIDE_COSTS.length - 1)];
+    }
+    function multiplyCost(rank) {
+      return Math.round(MULT_COST_BASE * Math.pow(MULT_COST_GROWTH, rank));
+    }
+    function spendPoints(cost) {
+      if (state.points < cost) return false;
+      state.points -= cost;
+      return true;
+    }
+    function lifeBlockReason() {
+      if (!state.runActive) return 'Start a run before buying an extra life.';
+      if (state.livesBought >= MAX_LIFE_BUYS) return 'Limit reached: 2 extra lives per run.';
+      if (state.lives >= MAX_LIVES) return 'You already have the maximum of 5 lives.';
+      return null;
+    }
+    function currentWeapon() {
+      if (state.tankDeployed) return TANK_WEAPON;
+      return WEAPONS[state.weaponId] || WEAPONS.pistol;
+    }
+    function activeSkin() {
+      const id = state.runActive ? state.skinId : Save.data.loadout.skin;
+      return SKINS[id] || SKINS.default;
+    }
+    function troopRxList() {
+      if (state.tankDeployed) return [state.playerRx];
+      const count = state.troops;
+      if (count <= 1) return [state.playerRx];
+      const gap = Math.min(0.16, 1.3 / count);
+      const mid = (count - 1) / 2;
+      const list = [];
+      for (let i = 0; i < count; i++) {
+        list.push(clamp(state.playerRx + (i - mid) * gap, -0.92, 0.92));
+      }
+      return list;
+    }
+    function pauseLine() {
+      return 'Score ' + fmt(state.score) + ' · Points ' + fmt(state.points) + ' · Wave ' + state.wave;
+    }
+
+    /* ----------------------------------------------------------
+     * Simulation
+     * ---------------------------------------------------------- */
+
+    function resetCombat() {
+      state.score = 0;
+      state.points = 0;
+      state.lives = START_LIVES;
+      state.livesBought = 0;
+      state.damageMult = 1;
+      state.fireRateMult = 1;
+      state.dmgRank = 0;
+      state.rateRank = 0;
+      state.tankArmor = 0;
+      state.armorTimer = 0;
+      state.playerRx = 0;
+      state.moving = false;
+      state.invuln = 1.1;
+      state.hurtFlash = 0;
+      state.shake = 0;
+      state.fireCooldown = 0;
+      state.shotsFired = 0;
+      state.kills = 0;
+      state.runGems = 0;
+      state.runId = Date.now() + '-' + Math.floor(Math.random() * 10000);
+      state.waveBreak = 0;
+      state.banner = null;
+      state.taught = false;
+      state.intros = {};
+      state.enemies = [];
+      state.bullets = [];
+      state.particles = [];
+      state.floaters = [];
+      state.muzzles = [];
+      state.stack = [];
+    }
+
+    function startRun() {
+      if (state.runActive) return;
+      const loadout = Save.data.loadout;
+      resetCombat();
+      state.weaponId = loadout.weapon;
+      state.skinId = loadout.skin;
+      state.troops = Save.data.unlocks.troopMultiplier ? 2 : 1;
+      state.tankDeployed = !!(loadout.useTank && Save.data.unlocks.tank);
+      if (state.tankDeployed) {
+        state.tankArmor = TANK_ARMOR_MAX;
+        state.armorTimer = 0;
+      }
+      state.runActive = true;
+      state.mode = 'playing';
+      beginWave(1);
+      syncScreens();
+      updateHud();
+      audio.ensure();
+    }
+
+    function beginWave(n) {
+      state.wave = n;
+      state.toSpawn = spawnCount(n);
+      state.spawnTimer = n === 1 ? 0.45 : 0.35;
+      state.commanderSpawned = false;
+      state.waveBreak = 0;
+      state.banner = { text: 'WAVE ' + n, t: 1.3 };
+      if (n === 3 || n === 5 || n === 8) {
+        const line = {
+          3: 'Runners are in the march.',
+          5: 'Brutes are in the march.',
+          8: 'Shielded elites are in the march.'
+        }[n];
+        if (!state.intros[n]) {
+          state.intros[n] = true;
+          toast(line);
+        }
+      }
+    }
+
+    function spawnEnemy(typeId, rx) {
+      const type = ENEMY_TYPES[typeId];
+      const scale = hpScale(state.wave);
+      const hp = Math.max(1, Math.round(type.hp * scale));
+      const shield = Math.round((type.shield || 0) * scale);
+      const lane = rx == null ? randomRx() : rx;
+      state.enemies.push({
+        type: typeId,
+        rx: lane,
+        rz: 0.97,
+        hp,
+        maxHp: hp,
+        shield,
+        maxShield: shield,
+        speed: type.speed * speedScale(state.wave),
+        wobble: Math.random() * Math.PI * 2,
+        wobbleAmp: type.wobble,
+        hitScale: type.hitScale,
+        score: type.score,
+        gems: type.gems,
+        flash: 0,
+        phase: Math.random() * Math.PI * 2,
+        drawRx: lane,
+        dead: false
+      });
+    }
+
+    function randomRx() {
+      for (let i = 0; i < 6; i++) {
+        const rx = Math.random() * 1.6 - 0.8;
+        const crowded = state.enemies.some((e) => e.rz > 0.78 && Math.abs(e.rx - rx) < 0.2);
+        if (!crowded) return rx;
+      }
+      return Math.random() * 1.6 - 0.8;
+    }
+
+    function pickType(wave) {
+      const bag = [{ id: 'grunt', w: wave >= 7 ? 34 : 64 }];
+      if (wave >= 3) bag.push({ id: 'runner', w: 26 + Math.min(18, wave) });
+      if (wave >= 5) bag.push({ id: 'brute', w: 16 + Math.min(18, wave) });
+      if (wave >= 8) bag.push({ id: 'elite', w: 14 + Math.min(16, wave) });
+      let total = 0;
+      for (const row of bag) total += row.w;
+      let roll = Math.random() * total;
+      for (const row of bag) {
+        roll -= row.w;
+        if (roll <= 0) return row.id;
+      }
+      return 'grunt';
+    }
+
+    function spawnOne() {
+      const total = spawnCount(state.wave);
+      const already = total - state.toSpawn;
+      if (state.wave % 10 === 0 && !state.commanderSpawned && already >= Math.floor(total / 2)) {
+        state.commanderSpawned = true;
+        spawnEnemy('commander');
+        state.banner = { text: 'COMMANDER', t: 1.2 };
+      } else if (state.wave === 1 && already === 0) {
+        spawnEnemy('grunt', 0);
+      } else {
+        spawnEnemy(pickType(state.wave));
+      }
+      state.toSpawn -= 1;
+    }
+
+    function shoot() {
+      const weapon = currentWeapon();
+      const slots = troopRxList();
+      const damage = weapon.damage * state.damageMult;
+      const splashDamage = (weapon.splashDamage || 0) * state.damageMult;
+      state.shotsFired += 1;
+      audio.shoot(state.tankDeployed ? 'tank' : weapon.id);
+      if (weapon.shake) state.shake = Math.max(state.shake, weapon.shake);
+      while (state.muzzles.length < slots.length) state.muzzles.push(0);
+      slots.forEach((rx, i) => {
+        state.muzzles[i] = 0.07;
+        const count = weapon.pellets;
+        for (let p = 0; p < count; p++) {
+          const mid = (count - 1) / 2;
+          state.bullets.push({
+            rx: clamp(rx + (p - mid) * weapon.spread, -1.05, 1.05),
+            rz: BULLET_Z,
+            speed: weapon.speed,
+            damage,
+            color: weapon.color,
+            splash: weapon.splash || 0,
+            splashDamage,
+            dead: false
+          });
+        }
+      });
+      if (state.bullets.length > 120) state.bullets.splice(0, state.bullets.length - 120);
+    }
+
+    function laneHit(bullet, prevRz, enemy) {
+      const lo = Math.min(prevRz, bullet.rz) - 0.02;
+      const hi = Math.max(prevRz, bullet.rz) + 0.02;
+      if (enemy.rz < lo || enemy.rz > hi) return false;
+      const tol = (0.09 + enemy.rz * 0.12) * enemy.hitScale;
+      return Math.abs(bullet.rx - enemy.drawRx) <= tol;
+    }
+
+    function hurt(enemy, amount) {
+      if (!enemy || enemy.dead || amount <= 0) return;
+      enemy.flash = 0.09;
+      hitSoundQueued = true;
+      let remaining = amount;
+      if (enemy.shield > 0) {
+        const used = Math.min(enemy.shield, remaining);
+        enemy.shield -= used;
+        remaining -= used;
+        if (enemy.shield <= 0) {
+          floatAt(enemy, 'SHIELD DOWN', '#9be7ff');
+          burst(enemy, '#9be7ff', 8);
+        }
+      }
+      if (remaining <= 0) return;
+      enemy.hp -= remaining;
+      if (enemy.hp <= 0) defeat(enemy);
+    }
+
+    function defeat(enemy) {
+      if (enemy.dead) return;
+      enemy.dead = true;
+      state.score += enemy.score;
+      state.points += enemy.score;
+      state.kills += 1;
+      if (enemy.gems > 0) {
+        const granted = Commerce.grantReward(DROP_ID, { gems: enemy.gems, source: 'kill' });
+        if (granted.ok) state.runGems += enemy.gems;
+      }
+      floatAt(enemy, '+' + enemy.score, '#fff7df');
+      if (enemy.gems > 0) floatAt(enemy, '+' + enemy.gems + '◆', '#8ee7ff', 18);
+      const type = ENEMY_TYPES[enemy.type];
+      burst(enemy, type ? type.body : '#fff', enemy.type === 'commander' ? 18 : 10);
+      audio.kill();
+      if (enemy.type === 'brute' || enemy.type === 'commander') state.shake = Math.max(state.shake, 5);
+    }
+
+    function impact(bullet, enemy) {
+      hurt(enemy, bullet.damage);
+      if (bullet.splash > 0) {
+        state.enemies.forEach((other) => {
+          if (other === enemy || other.dead) return;
+          const dx = other.drawRx - bullet.rx;
+          const dz = (other.rz - bullet.rz) * 0.7;
+          if (dx * dx + dz * dz <= bullet.splash * bullet.splash) hurt(other, bullet.splashDamage);
+        });
+      }
+      const p = project(bullet.rx, bullet.rz);
+      state.particles.push({
+        x: p.x, y: p.y, vx: 0, vy: -10, life: 0.12, color: '#fff6d0', size: 4
+      });
+    }
+
+    function onBreach(enemy) {
+      burst(enemy, '#ffb0b0', 8);
+      if (state.invuln > 0) return;
+      if (state.tankDeployed && state.tankArmor > 0) {
+        state.tankArmor -= 1;
+        state.invuln = 0.75;
+        state.hurtFlash = 0.35;
+        state.shake = 8;
+        audio.hurt();
+        floatAt(enemy, 'ARMOR -1', '#ffd0a0');
+        return;
+      }
+      state.lives -= 1;
+      state.invuln = 1.35;
+      state.hurtFlash = 0.55;
+      state.shake = 12;
+      audio.hurt();
+      if (state.lives <= 0) gameOver();
+    }
+
+    function completeWave() {
+      const cleared = state.wave;
+      const bonus = 50 * cleared;
+      state.score += bonus;
+      state.points += bonus;
+      const gems = 4 + cleared;
+      const granted = Commerce.grantReward(DROP_ID, { gems, source: 'wave' });
+      if (granted.ok) state.runGems += gems;
+      state.banner = { text: 'WAVE CLEAR +' + bonus, t: 1.4 };
+      state.waveBreak = 2.4;
+      audio.upgrade();
+      applyMilestones(cleared);
+    }
+
+    function applyMilestones(cleared) {
+      MILESTONES.forEach((milestone) => {
+        if (milestone.wave !== cleared) return;
+        const result = Commerce.grantReward(milestone.productId, { source: 'gameplay' });
+        if (result.newly) toast(milestone.text);
+      });
+    }
+
+    function simulate(dt) {
+      const dir = moveDir();
+      state.moving = dir !== 0;
+      const moveSpeed = state.tankDeployed ? 0.62 : 0.95;
+      state.playerRx = clamp(state.playerRx + dir * moveSpeed * dt, -0.86, 0.86);
+
+      state.invuln = Math.max(0, state.invuln - dt);
+      state.hurtFlash = Math.max(0, state.hurtFlash - dt);
+      state.shake = Math.max(0, state.shake - dt * 28);
+      if (state.banner) {
+        state.banner.t -= dt;
+        if (state.banner.t <= 0) state.banner = null;
+      }
+      for (let i = 0; i < state.muzzles.length; i++) state.muzzles[i] = Math.max(0, state.muzzles[i] - dt);
+
+      if (state.tankDeployed && state.tankArmor < TANK_ARMOR_MAX) {
+        state.armorTimer += dt;
+        if (state.armorTimer >= TANK_REGEN_SECONDS) {
+          state.armorTimer = 0;
+          state.tankArmor += 1;
+        }
+      }
+
+      const shooting = keys.has(' ') || keys.has('space');
+      state.fireCooldown -= dt;
+      if (shooting && state.fireCooldown <= 0) {
+        shoot();
+        const interval = 1 / (currentWeapon().rate * state.fireRateMult);
+        state.fireCooldown += interval;
+        if (state.fireCooldown < -interval) state.fireCooldown = 0;
+      }
+
+      if (state.waveBreak > 0) {
+        state.waveBreak -= dt;
+        if (state.waveBreak <= 0) beginWave(state.wave + 1);
+      } else if (state.toSpawn > 0) {
+        state.spawnTimer -= dt;
+        if (state.spawnTimer <= 0) {
+          spawnOne();
+          state.spawnTimer = spawnInterval(state.wave);
+        }
+      }
+
+      state.enemies.forEach((enemy) => {
+        if (enemy.dead) return;
+        enemy.rz -= enemy.speed * dt;
+        enemy.phase += dt * 10;
+        enemy.flash = Math.max(0, enemy.flash - dt);
+        enemy.drawRx = clamp(
+          enemy.rx + Math.sin(state.time * 2.2 + enemy.wobble) * enemy.wobbleAmp,
+          -0.95,
+          0.95
+        );
+      });
+
+      state.bullets.forEach((bullet) => {
+        if (bullet.dead) return;
+        const prev = bullet.rz;
+        bullet.rz += bullet.speed * dt;
+        if (bullet.rz > 1.08) {
+          bullet.dead = true;
+          return;
+        }
+        let hit = null;
+        state.enemies.forEach((enemy) => {
+          if (enemy.dead || !laneHit(bullet, prev, enemy)) return;
+          if (!hit || enemy.rz < hit.rz) hit = enemy;
+        });
+        if (hit) {
+          bullet.dead = true;
+          impact(bullet, hit);
+        }
+      });
+
+      state.enemies.forEach((enemy) => {
+        if (!enemy.dead && enemy.rz <= BREACH_RZ) {
+          enemy.dead = true;
+          onBreach(enemy);
+        }
+      });
+
+      state.enemies = state.enemies.filter((enemy) => !enemy.dead);
+      state.bullets = state.bullets.filter((bullet) => !bullet.dead);
+
+      if (hitSoundQueued) {
+        audio.hit();
+        hitSoundQueued = false;
+      }
+
+      state.particles.forEach((p) => {
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.vy += 80 * dt;
+        p.life -= dt;
+      });
+      state.particles = state.particles.filter((p) => p.life > 0);
+      if (state.particles.length > 140) state.particles.splice(0, state.particles.length - 140);
+
+      state.floaters.forEach((f) => {
+        f.y += f.vy * dt;
+        f.life -= dt;
+      });
+      state.floaters = state.floaters.filter((f) => f.life > 0);
+
+      if (state.runActive && state.mode === 'playing' && state.waveBreak <= 0 && state.toSpawn <= 0 && state.enemies.length === 0) {
+        completeWave();
+      }
+
+      if (!state.taught && state.points >= 40) {
+        state.taught = true;
+        toast('Press U to spend points: Divide, Multiply, or Subtract.');
+      }
+    }
+
+    function burst(enemy, color, n) {
+      const p = project(enemy.drawRx == null ? enemy.rx : enemy.drawRx, enemy.rz);
+      for (let i = 0; i < n; i++) {
+        const a = Math.random() * Math.PI * 2;
+        const s = 30 + Math.random() * 110;
+        state.particles.push({
+          x: p.x,
+          y: p.y,
+          vx: Math.cos(a) * s,
+          vy: Math.sin(a) * s,
+          life: 0.28 + Math.random() * 0.25,
+          color,
+          size: 2 + Math.random() * 3
+        });
+      }
+    }
+
+    function floatAt(enemy, text, color, lift) {
+      const p = project(enemy.drawRx == null ? enemy.rx : enemy.drawRx, enemy.rz);
+      state.floaters.push({
+        x: p.x,
+        y: p.y - 24 - (lift || 0),
+        text,
+        color,
+        life: 0.75,
+        vy: -32
+      });
+      if (state.floaters.length > 20) state.floaters.shift();
+    }
+
+    /* ----------------------------------------------------------
+     * Upgrades (points). Permanent unlocks still go through Commerce.
+     * ---------------------------------------------------------- */
+
+    function doDivide() {
+      if (!state.runActive) return;
+      if (state.tankDeployed) {
+        toast('Dismount the tank before dividing the squad.');
+        return;
+      }
+      if (state.troops >= troopCap()) {
+        toast('The squad is as large as it gets.');
+        return;
+      }
+      const cost = divideCost(state.troops);
+      if (!spendPoints(cost)) {
+        toast('Divide costs ' + cost + ' points.');
+        return;
+      }
+      state.troops += 1;
+      audio.upgrade();
+      toast('Divided into ' + state.troops + ' troops.');
+      refreshUpgrade();
+      updateHud();
+    }
+
+    function doMultiply(kind) {
+      if (!state.runActive) return;
+      const rank = kind === 'damage' ? state.dmgRank : state.rateRank;
+      const label = kind === 'damage' ? 'Damage' : 'Fire rate';
+      if (rank >= MAX_MULT_RANK) {
+        toast(label + ' is maxed.');
+        return;
+      }
+      const cost = multiplyCost(rank);
+      if (!spendPoints(cost)) {
+        toast('Multiply costs ' + cost + ' points.');
+        return;
+      }
+      if (kind === 'damage') {
+        state.dmgRank += 1;
+        state.damageMult = Math.pow(DAMAGE_STEP, state.dmgRank);
+        toast('Damage multiplied to ' + fmtMult(state.damageMult) + '.');
+      } else {
+        state.rateRank += 1;
+        state.fireRateMult = Math.pow(RATE_STEP, state.rateRank);
+        toast('Fire rate multiplied to ' + fmtMult(state.fireRateMult) + '.');
+      }
+      audio.upgrade();
+      refreshUpgrade();
+      updateHud();
+    }
+
+    function doSubtract() {
+      if (!state.runActive) return;
+      if (state.tankDeployed) {
+        toast('The tank is using its cannon. Dismount to change guns.');
+        return;
+      }
+      const idx = WEAPON_ORDER.indexOf(state.weaponId);
+      if (idx < 0 || idx >= WEAPON_ORDER.length - 1) {
+        toast('No bigger infantry weapon is left.');
+        return;
+      }
+      const next = WEAPON_ORDER[idx + 1];
+      const cost = POINT_COSTS[next];
+      if (!spendPoints(cost)) {
+        toast(WEAPONS[next].name + ' costs ' + cost + ' points.');
+        return;
+      }
+      state.weaponId = next;
+      Commerce.grantReward(WEAPONS[next].productId, { source: 'points' });
+      audio.upgrade();
+      toast(WEAPONS[next].name + ' equipped.');
+      refreshUpgrade();
+      updateHud();
+    }
+
+    function doTank() {
+      if (!state.runActive) return;
+      if (state.tankDeployed) {
+        toast('Tank is already deployed.');
+        return;
+      }
+      if (!Save.data.unlocks.tank) {
+        if (state.wave < 4) {
+          toast('Reach wave 4 to buy the tank with points, or clear wave 10.');
+          return;
+        }
+        if (!spendPoints(POINT_COSTS.tank)) {
+          toast('Tank costs ' + POINT_COSTS.tank + ' points.');
+          return;
+        }
+        Commerce.grantReward('com.coolnewgame.tank', { source: 'points' });
+      }
+      state.tankDeployed = true;
+      state.tankArmor = TANK_ARMOR_MAX;
+      state.armorTimer = 0;
+      state.shake = Math.max(state.shake, 4);
+      audio.upgrade();
+      toast('Tank deployed.');
+      refreshUpgrade();
+      updateHud();
+    }
+
+    function doDismount() {
+      if (!state.tankDeployed) return;
+      state.tankDeployed = false;
+      state.tankArmor = 0;
+      toast('Back on foot.');
+      audio.ui();
+      refreshUpgrade();
+      updateHud();
+    }
+
+    /* ----------------------------------------------------------
+     * Rendering
+     * ---------------------------------------------------------- */
+
+    function resize() {
+      const rect = canvas.getBoundingClientRect();
+      const dpr = Math.min(2, window.devicePixelRatio || 1);
+      const w = Math.max(1, Math.round(rect.width * dpr));
+      const h = Math.max(1, Math.round(rect.height * dpr));
+      if (canvas.width !== w || canvas.height !== h) {
+        canvas.width = w;
+        canvas.height = h;
+      }
+      viewScaleX = canvas.width / VIEW_W;
+      viewScaleY = canvas.height / VIEW_H;
+    }
+
+    function render() {
+      resize();
+      ctx.setTransform(viewScaleX, 0, 0, viewScaleY, 0, 0);
+      ctx.fillStyle = '#1b2a4a';
+      ctx.fillRect(-40, -40, VIEW_W + 80, VIEW_H + 80);
+      ctx.save();
+      if (state.shake > 0.2 && !reduceMotion) {
+        ctx.translate((Math.random() - 0.5) * state.shake, (Math.random() - 0.5) * state.shake);
+      }
+      drawBackdrop();
+      if (showingAttract()) drawAttract();
+      else drawBattle();
+      drawBanner();
+      if (state.hurtFlash > 0) {
+        ctx.fillStyle = 'rgba(180, 20, 20, ' + Math.min(0.45, state.hurtFlash) + ')';
+        ctx.fillRect(-20, -20, VIEW_W + 40, VIEW_H + 40);
+      }
+      ctx.restore();
+    }
+
+    function showingAttract() {
+      return !state.runActive && state.mode !== 'gameover';
+    }
+
+    function drawBackdrop() {
+      const horizon = VIEW_H * 0.34;
+      const sky = ctx.createLinearGradient(0, -20, 0, horizon);
+      sky.addColorStop(0, '#1b2a4a');
+      sky.addColorStop(0.55, '#b85a48');
+      sky.addColorStop(1, '#f0b36a');
+      ctx.fillStyle = sky;
+      ctx.fillRect(-40, -40, VIEW_W + 80, horizon + 20);
+
+      const sunX = VIEW_W * 0.72;
+      const sunY = horizon - 58;
+      ctx.fillStyle = 'rgba(255, 214, 140, 0.35)';
+      ctx.beginPath();
+      ctx.arc(sunX, sunY, 74, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#ffe3a6';
+      ctx.beginPath();
+      ctx.arc(sunX, sunY, 32, 0, Math.PI * 2);
+      ctx.fill();
+
+      drawClouds();
+      drawSkyline(horizon);
+
+      const ground = ctx.createLinearGradient(0, horizon, 0, VIEW_H);
+      ground.addColorStop(0, '#7ea04e');
+      ground.addColorStop(0.22, '#3e5a30');
+      ground.addColorStop(1, '#24361c');
+      ctx.fillStyle = ground;
+      ctx.fillRect(-40, horizon, VIEW_W + 80, VIEW_H - horizon + 40);
+
+      fillRoad(-1.45, -1.02, '#8f877c');
+      fillRoad(1.02, 1.45, '#8f877c');
+      const road = ctx.createLinearGradient(0, horizon, 0, VIEW_H);
+      road.addColorStop(0, '#9a9186');
+      road.addColorStop(0.35, '#6d655c');
+      road.addColorStop(1, '#3e3934');
+      ctx.fillStyle = road;
+      fillRoad(-1, 1, null);
+      strokeEdge(-1);
+      strokeEdge(1);
+      drawDashes();
+    }
+
+    function drawClouds() {
+      const seeds = [
+        { x: 30, y: 64, s: 1 },
+        { x: 170, y: 40, s: 0.7 },
+        { x: 280, y: 86, s: 0.85 },
+        { x: 390, y: 36, s: 0.55 }
+      ];
+      seeds.forEach((c) => {
+        const x = ((c.x + state.time * 8) % (VIEW_W + 90)) - 40;
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.16)';
+        ctx.beginPath();
+        ctx.ellipse(x, c.y, 28 * c.s, 12 * c.s, 0, 0, Math.PI * 2);
+        ctx.ellipse(x + 18 * c.s, c.y + 4, 20 * c.s, 10 * c.s, 0, 0, Math.PI * 2);
+        ctx.ellipse(x - 16 * c.s, c.y + 5, 16 * c.s, 9 * c.s, 0, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
+
+    function drawSkyline(horizon) {
+      const heights = [34, 70, 46, 96, 58, 120, 40, 84, 52, 100, 36, 76, 48];
+      let x = -8;
+      for (let i = 0; i < heights.length; i++) {
+        const w = 30 + (i % 4) * 8;
+        const h = heights[i];
+        ctx.fillStyle = i % 2 === 0 ? '#241e28' : '#322830';
+        ctx.fillRect(x, horizon - h, w + 2, h + 6);
+        ctx.fillStyle = 'rgba(255, 196, 120, 0.28)';
+        for (let wy = horizon - h + 8; wy < horizon - 8; wy += 12) {
+          for (let wx = x + 6; wx < x + w - 4; wx += 10) {
+            if (((i * 13 + wx + wy) % 17) % 3 === 0) ctx.fillRect(wx, wy, 3, 5);
+          }
+        }
+        x += w;
+      }
+    }
+
+    function fillRoad(rx0, rx1, color) {
+      const a = project(rx0, 1);
+      const b = project(rx1, 1);
+      const c = project(rx1, 0);
+      const d = project(rx0, 0);
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+      ctx.lineTo(c.x, c.y);
+      ctx.lineTo(d.x, d.y);
+      ctx.closePath();
+      if (color) ctx.fillStyle = color;
+      ctx.fill();
+    }
+
+    function strokeEdge(rx) {
+      const a = project(rx, 1);
+      const b = project(rx, 0);
+      ctx.strokeStyle = 'rgba(240, 226, 192, 0.85)';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+      ctx.stroke();
+    }
+
+    function drawDashes() {
+      const shift = (state.time * 0.28) % 1;
+      for (let i = 0; i < 8; i++) {
+        let z = i / 8 - shift;
+        if (z < 0) z += 1;
+        const z2 = Math.max(0, z - 0.04);
+        const p1 = project(0, z);
+        const p2 = project(0, z2);
+        ctx.strokeStyle = 'rgba(245, 230, 190, 0.8)';
+        ctx.lineWidth = Math.max(1.5, (1 - z) * 5);
+        ctx.beginPath();
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+        ctx.stroke();
+      }
+    }
+
+    function drawProps() {
+      PROPS.slice().sort((a, b) => b.rz - a.rz).forEach((prop) => {
+        const p = project(prop.rx, prop.rz);
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.scale(p.scale, p.scale);
+        if (prop.kind === 'bush') {
+          ctx.fillStyle = '#2f6a32';
+          ctx.beginPath();
+          ctx.arc(-6, -8, 8, 0, Math.PI * 2);
+          ctx.arc(6, -6, 9, 0, Math.PI * 2);
+          ctx.arc(0, -14, 8, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (prop.kind === 'crate') {
+          ctx.fillStyle = '#8a5a32';
+          ctx.fillRect(-8, -16, 16, 14);
+          ctx.strokeStyle = '#3a2414';
+          ctx.strokeRect(-8, -16, 16, 14);
+          ctx.beginPath();
+          ctx.moveTo(-8, -9);
+          ctx.lineTo(8, -9);
+          ctx.moveTo(0, -16);
+          ctx.lineTo(0, -2);
+          ctx.stroke();
+        } else {
+          ctx.fillStyle = '#6e675e';
+          ctx.beginPath();
+          ctx.ellipse(0, -4, 10, 6, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      });
+    }
+
+    function drawAimLanes() {
+      ctx.lineWidth = 10;
+      ctx.strokeStyle = 'rgba(255, 214, 120, 0.22)';
+      troopRxList().forEach((rx) => {
+        const near = project(rx, PLAYER_RZ);
+        const far = project(rx, 0.96);
+        ctx.beginPath();
+        ctx.moveTo(near.x, near.y);
+        ctx.lineTo(far.x, far.y);
+        ctx.stroke();
+      });
+    }
+
+    function drawBattle() {
+      drawAimLanes();
+      drawProps();
+      const sprites = [];
+      state.enemies.forEach((enemy) => sprites.push({ rz: enemy.rz, draw: () => drawEnemy(enemy) }));
+      state.bullets.forEach((bullet) => sprites.push({ rz: bullet.rz, draw: () => drawBullet(bullet) }));
+      sprites.push({ rz: PLAYER_RZ, draw: drawPlayer });
+      sprites.sort((a, b) => b.rz - a.rz);
+      sprites.forEach((sprite) => sprite.draw());
+      drawParticles();
+      drawFloaters();
+    }
+
+    function drawAttract() {
+      drawProps();
+      const t = state.time;
+      const types = ['grunt', 'runner', 'brute', 'elite', 'grunt'];
+      const enemies = types.map((type, i) => ({
+        type,
+        rx: Math.sin(i * 1.7) * 0.62,
+        rz: 0.9 - ((t * 0.07 + i * 0.16) % 0.72),
+        phase: t * 10 + i,
+        hp: 1,
+        maxHp: type === 'brute' || type === 'commander' ? 4 : 1,
+        shield: type === 'elite' ? 2 : 0,
+        maxShield: type === 'elite' ? 2 : 0,
+        flash: 0,
+        drawRx: Math.sin(i * 1.7) * 0.62
+      }));
+      enemies.sort((a, b) => b.rz - a.rz);
+      enemies.forEach(drawEnemy);
+      const rx = Math.sin(t * 0.7) * 0.5;
+      const muzzle = (t % 0.45) < 0.06 ? 0.07 : 0;
+      drawTroop(rx, false, muzzle, t * 8, activeSkin(), WEAPONS.pistol);
+      for (let i = 0; i < 3; i++) {
+        drawBullet({ rx, rz: 0.22 + ((t * 0.45 + i * 0.18) % 0.7), color: '#ffe566' });
+      }
+    }
+
+    function drawPlayer() {
+      const skin = activeSkin();
+      const blink = state.invuln > 0 && Math.floor(state.time * 14) % 2 === 0;
+      if (blink) return;
+      if (state.tankDeployed) {
+        const p = project(state.playerRx, PLAYER_RZ);
+        drawTank(p.x, p.y, p.scale * 1.15, skin, state.moving ? state.time * 14 : state.time * 2);
+        return;
+      }
+      const slots = troopRxList();
+      const weapon = currentWeapon();
+      slots.forEach((rx, i) => {
+        drawTroop(rx, false, state.muzzles[i] || 0, state.time * (state.moving ? 12 : 2) + i, skin, weapon);
+      });
+    }
+
+    function drawTroop(rx, front, muzzle, phase, skin, weapon) {
+      const p = project(rx, front ? 0.4 : PLAYER_RZ);
+      drawSoldier(p.x, p.y, p.scale * (front ? 1 : 1.2), {
+        front,
+        body: skin.body,
+        helmet: skin.helmet,
+        skin: skin.skin,
+        pack: skin.pack,
+        gun: skin.gun,
+        accent: skin.accent,
+        phase,
+        muzzle,
+        gunLen: weapon ? weapon.gunLen : 18,
+        flash: 0
+      });
+    }
+
+    function drawEnemy(enemy) {
+      const type = ENEMY_TYPES[enemy.type] || ENEMY_TYPES.grunt;
+      const p = project(enemy.drawRx == null ? enemy.rx : enemy.drawRx, enemy.rz);
+      ctx.save();
+      ctx.globalAlpha = 0.78 + (1 - clamp(enemy.rz, 0, 1)) * 0.22;
+      drawSoldier(p.x, p.y, p.scale * type.scale, {
+        front: true,
+        body: type.body,
+        helmet: type.helmet,
+        skin: type.skin,
+        pack: type.pack,
+        gun: type.gun,
+        phase: enemy.phase,
+        muzzle: 0,
+        gunLen: 16 + type.scale * 4,
+        lean: !!type.lean,
+        wide: !!type.wide,
+        cape: !!type.cape,
+        shield: enemy.shield,
+        maxShield: enemy.maxShield,
+        flash: enemy.flash,
+        accent: type.helmet
+      });
+      ctx.restore();
+      if ((enemy.maxHp > 1 || enemy.maxShield > 0) && p.scale > 0.5) {
+        const w = 26 * p.scale;
+        const top = p.y - 62 * p.scale * type.scale;
+        ctx.fillStyle = 'rgba(0,0,0,0.55)';
+        ctx.fillRect(p.x - w / 2, top, w, 4);
+        ctx.fillStyle = '#ff5d5d';
+        ctx.fillRect(p.x - w / 2, top, w * clamp(enemy.hp / enemy.maxHp, 0, 1), 4);
+        if (enemy.maxShield > 0) {
+          ctx.fillStyle = '#7ee0ff';
+          ctx.fillRect(p.x - w / 2, top - 4, w * clamp(enemy.shield / enemy.maxShield, 0, 1), 3);
+        }
+      }
+    }
+
+    function drawSoldier(x, y, scale, o) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.fillStyle = 'rgba(0,0,0,0.28)';
+      ctx.beginPath();
+      ctx.ellipse(0, 2, 14 * scale, 5 * scale, 0, 0, Math.PI * 2);
+      ctx.fill();
+      if (o.lean) ctx.rotate(0.18);
+      ctx.scale(scale * (o.wide ? 1.12 : 1), scale);
+
+      const walk = Math.sin(o.phase || 0) * 6;
+      if (o.cape) {
+        ctx.fillStyle = '#6b1d1d';
+        ctx.beginPath();
+        ctx.moveTo(-8, -34);
+        ctx.lineTo(8, -34);
+        ctx.lineTo(12, -6);
+        ctx.lineTo(-12, -6);
+        ctx.fill();
+      }
+
+      ctx.strokeStyle = '#1b1b1b';
+      ctx.lineWidth = 4;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(-4, -16);
+      ctx.lineTo(-6, walk);
+      ctx.moveTo(4, -16);
+      ctx.lineTo(6, -walk);
+      ctx.stroke();
+
+      ctx.fillStyle = o.body;
+      roundRect(-11, -36, 22, 22, 4);
+      ctx.fill();
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = '#111';
+      ctx.stroke();
+
+      if (o.wide) {
+        ctx.fillStyle = o.body;
+        roundRect(-20, -34, 8, 8, 2);
+        ctx.fill();
+        roundRect(12, -34, 8, 8, 2);
+        ctx.fill();
+      }
+
+      if (!o.front) {
+        ctx.fillStyle = o.pack || '#2c241c';
+        roundRect(-7, -32, 14, 10, 2);
+        ctx.fill();
+      } else {
+        ctx.fillStyle = 'rgba(0,0,0,0.25)';
+        ctx.fillRect(-11, -24, 22, 4);
+      }
+
+      const headY = -42;
+      ctx.fillStyle = o.skin || '#e0b090';
+      ctx.beginPath();
+      ctx.arc(0, headY + 3, 7, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = o.helmet;
+      ctx.beginPath();
+      ctx.arc(0, headY, 8, Math.PI, 0, true);
+      ctx.fill();
+      ctx.fillRect(-9, headY - 1, 18, 5);
+      ctx.fillStyle = 'rgba(255,255,255,0.28)';
+      ctx.beginPath();
+      ctx.ellipse(-2, headY - 3, 3, 2, -0.4, 0, Math.PI * 2);
+      ctx.fill();
+
+      if (o.front) {
+        ctx.fillStyle = '#161616';
+        ctx.fillRect(-4, headY + 2, 2, 2);
+        ctx.fillRect(2, headY + 2, 2, 2);
+      }
+
+      ctx.save();
+      if (o.front) {
+        ctx.translate(-9, -22);
+        ctx.rotate(0.2);
+        ctx.fillStyle = o.gun;
+        ctx.fillRect(-2, 0, 4, o.gunLen || 16);
+      } else {
+        ctx.translate(8, -28);
+        ctx.rotate(-0.25);
+        ctx.fillStyle = o.gun;
+        ctx.fillRect(-2, -(o.gunLen || 16), 4, o.gunLen || 16);
+        if (o.muzzle > 0) {
+          const strength = Math.min(1, o.muzzle / 0.07);
+          ctx.fillStyle = '#fff6c2';
+          ctx.beginPath();
+          ctx.arc(0, -(o.gunLen || 16), 4 + strength * 10, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = o.accent || '#ffb703';
+          ctx.beginPath();
+          ctx.arc(0, -(o.gunLen || 16), 2 + strength * 4, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      ctx.restore();
+
+      if (o.shield > 0) {
+        ctx.strokeStyle = 'rgba(126, 224, 255, 0.9)';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(0, -18, 24, 0.15 * Math.PI, 0.85 * Math.PI);
+        ctx.stroke();
+      }
+
+      if (o.flash > 0) {
+        ctx.globalAlpha = Math.min(0.85, o.flash * 8);
+        ctx.fillStyle = '#fff';
+        roundRect(-11, -36, 22, 22, 4);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    function drawTank(x, y, scale, skin, phase) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.fillStyle = 'rgba(0,0,0,0.3)';
+      ctx.beginPath();
+      ctx.ellipse(0, 4, 28 * scale, 8 * scale, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.scale(scale, scale);
+      ctx.fillStyle = '#1a1a1a';
+      roundRect(-32, -10, 12, 26, 3);
+      ctx.fill();
+      roundRect(20, -10, 12, 26, 3);
+      ctx.fill();
+      ctx.fillStyle = '#555';
+      for (let i = 0; i < 3; i++) {
+        const wy = -4 + i * 8 + Math.sin(phase + i) * 0.4;
+        ctx.beginPath();
+        ctx.arc(-26, wy, 2.4, 0, Math.PI * 2);
+        ctx.arc(26, wy, 2.4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.fillStyle = skin.tank;
+      roundRect(-24, -22, 48, 30, 4);
+      ctx.fill();
+      ctx.strokeStyle = '#111';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.fillStyle = skin.tankDark;
+      ctx.beginPath();
+      ctx.arc(0, -16, 12, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#222';
+      ctx.fillRect(-3, -52, 6, 36);
+      if (state.muzzles[0] > 0) {
+        ctx.fillStyle = '#fff1c4';
+        ctx.beginPath();
+        ctx.arc(0, -54, 8, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.fillStyle = skin.accent;
+      ctx.fillRect(-16, -18, 10, 3);
+      ctx.restore();
+    }
+
+    function drawBullet(bullet) {
+      const p = project(bullet.rx, bullet.rz);
+      const tail = project(bullet.rx, Math.max(0, bullet.rz - 0.035));
+      ctx.strokeStyle = bullet.color || '#ffe566';
+      ctx.lineWidth = Math.max(1.5, 4 * p.scale);
+      ctx.beginPath();
+      ctx.moveTo(tail.x, tail.y);
+      ctx.lineTo(p.x, p.y);
+      ctx.stroke();
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, Math.max(1.4, 3 * p.scale), 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    function drawParticles() {
+      state.particles.forEach((p) => {
+        ctx.globalAlpha = Math.max(0, p.life * 2);
+        ctx.fillStyle = p.color;
+        ctx.fillRect(p.x, p.y, p.size, p.size);
+      });
+      ctx.globalAlpha = 1;
+    }
+
+    function drawFloaters() {
+      ctx.textAlign = 'center';
+      ctx.font = '700 14px Trebuchet MS, Segoe UI, sans-serif';
+      state.floaters.forEach((f) => {
+        ctx.globalAlpha = Math.max(0, f.life);
+        ctx.fillStyle = f.color;
+        ctx.fillText(f.text, f.x, f.y);
+      });
+      ctx.globalAlpha = 1;
+    }
+
+    function drawBanner() {
+      if (!state.banner || state.banner.t <= 0) return;
+      ctx.globalAlpha = Math.min(1, state.banner.t);
+      ctx.textAlign = 'center';
+      ctx.font = '800 30px Trebuchet MS, Segoe UI, sans-serif';
+      ctx.lineWidth = 5;
+      ctx.strokeStyle = '#1a1208';
+      ctx.strokeText(state.banner.text, VIEW_W / 2, VIEW_H * 0.42);
+      ctx.fillStyle = '#ffe08a';
+      ctx.fillText(state.banner.text, VIEW_W / 2, VIEW_H * 0.42);
+      ctx.globalAlpha = 1;
+    }
+
+    /* ----------------------------------------------------------
+     * HUD, screens, input
+     * ---------------------------------------------------------- */
+
+    function setText(id, text) {
+      const el = $(id);
+      if (el && el.textContent !== text) el.textContent = text;
+    }
+
+    function updateHud() {
+      if (!state.runActive) return;
+      const score = $('hud-score');
+      const points = $('hud-points');
+      const wave = $('hud-wave');
+      const gems = $('hud-gems');
+      const lives = $('hud-lives');
+      if (score) {
+        score.dataset.value = String(state.score);
+        score.textContent = fmt(state.score);
+      }
+      if (points) {
+        points.dataset.value = String(state.points);
+        points.textContent = fmt(state.points);
+      }
+      if (wave) {
+        wave.dataset.value = String(state.wave);
+        wave.textContent = String(state.wave);
+      }
+      const left = state.waveBreak > 0 ? 'clear' : String(state.toSpawn + state.enemies.length) + ' left';
+      setText('hud-left', left);
+      if (lives) {
+        let hearts = '';
+        for (let i = 0; i < state.lives; i++) hearts += '♥';
+        if (state.tankDeployed) hearts += '  Armor ' + state.tankArmor;
+        lives.dataset.value = String(state.lives);
+        lives.textContent = hearts || '0';
+      }
+      if (gems) {
+        gems.dataset.value = String(Save.data.gems);
+        gems.textContent = '◆ ' + fmt(Save.data.gems);
+      }
+      setText('hud-weapon', currentWeapon().name);
+      setText('hud-troops', state.tankDeployed ? 'Tank' : 'Troops ×' + state.troops);
+      const hint = $('hint');
+      if (hint) hint.hidden = state.kills > 0 || state.shotsFired > 8;
+    }
+
+    function toast(message) {
+      const el = $('toast');
+      el.textContent = message;
+      el.hidden = false;
+      toastTimer = 2.4;
+    }
+
+    function tickToast(dt) {
+      if (toastTimer <= 0) return;
+      toastTimer -= dt;
+      if (toastTimer <= 0) $('toast').hidden = true;
+    }
+
+    function syncScreens() {
+      const mode = state.mode;
+      $('screen-menu').hidden = mode !== 'menu';
+      $('screen-pause').hidden = mode !== 'pause';
+      $('screen-upgrade').hidden = mode !== 'upgrade';
+      $('screen-store').hidden = mode !== 'store';
+      $('screen-over').hidden = mode !== 'gameover';
+      $('hud').hidden = mode !== 'playing';
+    }
+
+    function openOverlay(next) {
+      state.stack.push(state.mode);
+      state.mode = next;
+      syncScreens();
+    }
+
+    function closeOverlay() {
+      const prev = state.stack.pop();
+      state.mode = prev || 'menu';
+      syncScreens();
+      if (state.mode === 'menu') buildMenu();
+      if (state.mode === 'gameover') buildGameOver();
+      if (state.mode === 'upgrade') buildUpgrade();
+      if (state.mode === 'store') buildStore();
+    }
+
+    function syncMuteButtons() {
+      const label = Save.data.muted ? 'Sound off' : 'Sound on';
+      document.querySelectorAll('[data-mute]').forEach((btn) => { btn.textContent = label; });
+    }
+
+    function toggleMute() {
+      Save.data.muted = !Save.data.muted;
+      Save.persist();
+      syncMuteButtons();
+      if (!Save.data.muted) audio.ui();
+    }
+
+    function buildMenu() {
+      const data = Save.data;
+      setText('menu-best', 'Best score: ' + fmt(data.bestScore));
+      setText('menu-gems', 'Gems: ' + fmt(data.gems));
+      setText('menu-note', state.menuNote || '');
+
+      const weapons = $('menu-weapons');
+      weapons.innerHTML = '';
+      WEAPON_ORDER.forEach((id) => {
+        const owned = data.unlocks.weapons.includes(id);
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'chip';
+        btn.dataset.weapon = id;
+        btn.disabled = !owned;
+        btn.setAttribute('aria-pressed', data.loadout.weapon === id ? 'true' : 'false');
+        btn.textContent = WEAPONS[id].name + (owned ? '' : ' · locked');
+        weapons.appendChild(btn);
+      });
+
+      const skins = $('menu-skins');
+      skins.innerHTML = '';
+      SKIN_ORDER.forEach((id) => {
+        const skin = SKINS[id];
+        const owned = data.unlocks.skins.includes(id);
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'chip';
+        btn.dataset.skin = id;
+        btn.disabled = !owned;
+        btn.setAttribute('aria-pressed', data.loadout.skin === id ? 'true' : 'false');
+        btn.innerHTML = '<i style="background:' + skin.accent + '"></i>' + esc(skin.name + (owned ? '' : ' · locked'));
+        skins.appendChild(btn);
+      });
+
+      const tank = $('menu-tank');
+      if (data.unlocks.tank) {
+        tank.innerHTML = '<label class="check"><input type="checkbox" id="opt-tank"' +
+          (data.loadout.useTank ? ' checked' : '') + '> Start in the tank</label>';
+      } else {
+        tank.innerHTML = '<p class="fine">Tank is locked. Clear wave 10, spend points from wave 4, or buy it in the store.</p>';
+      }
+    }
+
+    function buildUpgrade() {
+      $('upgrade-points').textContent = 'Points: ' + fmt(state.points);
+      const cap = troopCap();
+      const nextDivide = state.troops < cap && !state.tankDeployed;
+      const dmgMaxed = state.dmgRank >= MAX_MULT_RANK;
+      const rateMaxed = state.rateRank >= MAX_MULT_RANK;
+      const weaponIdx = WEAPON_ORDER.indexOf(state.weaponId);
+      const nextWeapon = weaponIdx >= 0 && weaponIdx < WEAPON_ORDER.length - 1 ? WEAPON_ORDER[weaponIdx + 1] : null;
+      const dmgCost = multiplyCost(state.dmgRank);
+      const rateCost = multiplyCost(state.rateRank);
+      const rows = [];
+
+      rows.push(opButton({
+        symbol: '÷',
+        name: 'Divide',
+        text: nextDivide
+          ? 'Split the squad. ' + state.troops + ' → ' + (state.troops + 1) + ' troops (max ' + cap + '). Each one fires.'
+          : (state.tankDeployed ? 'Dismount the tank before dividing.' : 'Squad is full (' + cap + ').'),
+        cost: nextDivide ? divideCost(state.troops) : null,
+        action: 'divide',
+        disabled: !nextDivide
+      }));
+      rows.push(opButton({
+        symbol: '×',
+        name: 'Multiply Damage',
+        text: dmgMaxed
+          ? 'Damage ' + fmtMult(state.damageMult) + ' is maxed.'
+          : 'Damage ' + fmtMult(state.damageMult) + ' → ' + fmtMult(state.damageMult * DAMAGE_STEP) + '.',
+        cost: dmgMaxed ? null : dmgCost,
+        action: 'multiply-damage',
+        disabled: dmgMaxed
+      }));
+      rows.push(opButton({
+        symbol: '×',
+        name: 'Multiply Fire Rate',
+        text: rateMaxed
+          ? 'Fire rate ' + fmtMult(state.fireRateMult) + ' is maxed.'
+          : 'Fire rate ' + fmtMult(state.fireRateMult) + ' → ' + fmtMult(state.fireRateMult * RATE_STEP) + '.',
+        cost: rateMaxed ? null : rateCost,
+        action: 'multiply-rate',
+        disabled: rateMaxed
+      }));
+      rows.push(opButton({
+        symbol: '−',
+        name: 'Subtract',
+        text: state.tankDeployed
+          ? 'The tank cannon is already out.'
+          : (nextWeapon
+            ? 'Spend points for a bigger gun. ' + currentWeapon().name + ' → ' + WEAPONS[nextWeapon].name + '.'
+            : 'Heavy Cannon is equipped.'),
+        cost: !state.tankDeployed && nextWeapon ? POINT_COSTS[nextWeapon] : null,
+        action: 'subtract',
+        disabled: state.tankDeployed || !nextWeapon
+      }));
+
+      if (state.tankDeployed) {
+        rows.push(opButton({
+          symbol: '▣',
+          name: 'Dismount',
+          text: 'Leave the tank and return to the squad. Armor ' + state.tankArmor + '/' + TANK_ARMOR_MAX + '.',
+          cost: null,
+          action: 'dismount',
+          costLabel: 'Free'
+        }));
+      } else if (Save.data.unlocks.tank) {
+        rows.push(opButton({
+          symbol: '▣',
+          name: 'Tank',
+          text: 'Deploy the tank. Extra armor and a cannon. Your squad waits.',
+          cost: null,
+          action: 'tank',
+          costLabel: 'Free'
+        }));
+      } else if (state.wave < 4) {
+        rows.push(opButton({
+          symbol: '▣',
+          name: 'Tank',
+          text: 'Reach wave 4 to deploy for points, clear wave 10, or buy it with gems.',
+          action: 'tank',
+          disabled: true
+        }));
+      } else {
+        rows.push(opButton({
+          symbol: '▣',
+          name: 'Tank',
+          text: 'Unlock and deploy. Clearing wave 10 also unlocks it.',
+          cost: POINT_COSTS.tank,
+          action: 'tank'
+        }));
+      }
+
+      $('upgrade-list').innerHTML = '<p class="fine">Damage ' + fmtMult(state.damageMult) +
+        ' · Fire rate ' + fmtMult(state.fireRateMult) + ' · ' +
+        (state.tankDeployed ? 'Tank' : ('Troops ' + state.troops + '/' + cap)) + '</p>' + rows.join('');
+    }
+
+    function opButton(opts) {
+      const poor = opts.cost != null && state.points < opts.cost;
+      const cost = opts.costLabel || (opts.cost == null ? (opts.disabled ? '—' : 'Free') : (fmt(opts.cost) + ' pts'));
+      return '<button type="button" class="op" data-action="' + opts.action + '"' + (opts.disabled ? ' disabled' : '') + '>' +
+        '<span class="op-symbol">' + opts.symbol + '</span>' +
+        '<span><b>' + esc(opts.name) + '</b><small>' + esc(opts.text) + '</small></span>' +
+        '<span class="cost' + (poor ? ' poor' : '') + '">' + esc(cost) + '</span></button>';
+    }
+
+    function refreshUpgrade() {
+      if (state.mode === 'upgrade') buildUpgrade();
+    }
+
+    function buildStore() {
+      $('store-balance').textContent = 'Gems: ' + fmt(Save.data.gems) + ' · shortcuts only, the arsenal is earnable';
+      let html = '';
+      let lastGroup = '';
+      PRODUCT_CATALOG.forEach((product) => {
+        if (product.hidden) return;
+        if (product.group !== lastGroup) {
+          lastGroup = product.group;
+          const titles = {
+            life: 'Lives',
+            weapon: 'Weapons',
+            troops: 'Troops',
+            tank: 'Tank',
+            skin: 'Skins',
+            gems: 'Gem packs'
+          };
+          html += '<div class="group-label">' + titles[product.group] + '</div>';
+        }
+        html += '<div class="item"><div><b>' + esc(product.name) + '</b><p>' + esc(product.blurb) + '</p>' +
+          storeExtra(product) + '</div>' + storeButton(product) + '</div>';
+      });
+      $('store-list').innerHTML = html;
+    }
+
+    function storeExtra(product) {
+      if (product.grant !== 'life') return '';
+      const reason = lifeBlockReason();
+      return reason ? '<p class="warn">' + esc(reason) + '</p>' : '';
+    }
+
+    function storeButton(product) {
+      if (product.iap) {
+        return '<button type="button" class="buy" data-buy="' + product.id + '">Get pack</button>';
+      }
+      if (alreadyOwned(product)) {
+        if (product.grant === 'weapon') {
+          const equipped = Save.data.loadout.weapon === product.weaponId && !(state.runActive && state.tankDeployed);
+          if (equipped && (!state.runActive || state.weaponId === product.weaponId)) {
+            return '<button type="button" class="buy" disabled>Equipped</button>';
+          }
+          return '<button type="button" class="buy" data-equip-weapon="' + product.weaponId + '">Equip</button>';
+        }
+        if (product.grant === 'skin') {
+          if (Save.data.loadout.skin === product.skinId) return '<button type="button" class="buy" disabled>Equipped</button>';
+          return '<button type="button" class="buy" data-equip-skin="' + product.skinId + '">Equip</button>';
+        }
+        return '<button type="button" class="buy" disabled>Owned</button>';
+      }
+      if (product.grant === 'life' && lifeBlockReason()) return '';
+      return '<button type="button" class="buy" data-buy="' + product.id + '">' + product.gemPrice + ' gems</button>';
+    }
+
+    function announcePurchase(result) {
+      if (!result) return;
+      if (result.status === 'success') {
+        const product = findProduct(result.productId);
+        toast((product ? product.name : 'Item') + ' ready.');
+        audio.upgrade();
+        return;
+      }
+      if (result.status === 'iap_unavailable') {
+        toast('In-app purchases are not available in this browser build (iap_unavailable).');
+        return;
+      }
+      toast(result.message || 'Not available.');
+    }
+
+    function equipWeapon(id) {
+      if (!Save.data.unlocks.weapons.includes(id)) return;
+      Save.data.loadout.weapon = id;
+      Save.persist();
+      if (state.runActive && !state.tankDeployed) state.weaponId = id;
+      toast(WEAPONS[id].name + ' equipped.');
+      updateHud();
+      if (state.mode === 'store') buildStore();
+      if (state.mode === 'menu') buildMenu();
+    }
+
+    function equipSkin(id) {
+      if (!Save.data.unlocks.skins.includes(id)) return;
+      Save.data.loadout.skin = id;
+      Save.persist();
+      if (state.runActive) state.skinId = id;
+      toast(SKINS[id].name + ' equipped.');
+      if (state.mode === 'store') buildStore();
+      if (state.mode === 'menu') buildMenu();
+    }
+
+    function buildGameOver() {
+      setText('over-score', fmt(state.score));
+      setText('over-detail', 'Stopped on wave ' + state.wave + ' · ' + state.kills + ' kills · +' + state.runGems + ' gems');
+      setText('over-best', 'Best score: ' + fmt(Save.data.bestScore));
+      const list = $('leaderboard');
+      list.innerHTML = '';
+      if (!Save.data.runs.length) {
+        const li = document.createElement('li');
+        li.textContent = 'No scored runs yet.';
+        list.appendChild(li);
+      } else {
+        let shown = false;
+        Save.data.runs.forEach((run, index) => {
+          const li = document.createElement('li');
+          if (run.id === state.runId) {
+            li.className = 'current';
+            shown = true;
+          }
+          const rank = document.createElement('span');
+          rank.className = 'rank';
+          rank.textContent = '#' + (index + 1);
+          const meta = document.createElement('span');
+          meta.textContent = fmt(run.score) + ' · Wave ' + run.wave + ' · ' + formatDate(run.date);
+          li.appendChild(rank);
+          li.appendChild(meta);
+          list.appendChild(li);
+        });
+        if (!shown && state.score > 0) {
+          const li = document.createElement('li');
+          li.textContent = 'This run did not crack the top 5.';
+          list.appendChild(li);
+        }
+      }
+      $('share-note').textContent = '';
+    }
+
+    function recordRun() {
+      if (state.score <= 0) {
+        Save.data.bestScore = Save.data.runs.length ? Save.data.runs[0].score : Save.data.bestScore;
+        Save.persist();
+        return;
+      }
+      Save.data.runs.push({
+        id: state.runId,
+        score: state.score,
+        wave: state.wave,
+        kills: state.kills,
+        date: Date.now(),
+        weapon: state.tankDeployed ? 'tank' : state.weaponId,
+        tank: state.tankDeployed
+      });
+      Save.data.runs.sort((a, b) => b.score - a.score || b.date - a.date);
+      Save.data.runs = Save.data.runs.slice(0, 5);
+      Save.data.bestScore = Save.data.runs[0].score;
+      Save.persist();
+    }
+
+    function gameOver() {
+      if (!state.runActive) return;
+      state.invuln = 0;
+      state.hurtFlash = 0;
+      state.shake = 0;
+      const livesEl = $('hud-lives');
+      if (livesEl) {
+        livesEl.dataset.value = String(Math.max(0, state.lives));
+        livesEl.textContent = state.lives > 0 ? '♥'.repeat(state.lives) : '0';
+      }
+      state.runActive = false;
+      state.stack = [];
+      state.mode = 'gameover';
+      recordRun();
+      buildGameOver();
+      syncScreens();
+      audio.defeat();
+    }
+
+    function goMenu() {
+      state.mode = 'menu';
+      state.stack = [];
+      state.runActive = false;
+      state.enemies = [];
+      state.bullets = [];
+      state.particles = [];
+      state.floaters = [];
+      state.banner = null;
+      buildMenu();
+      syncScreens();
+    }
+
+    async function shareScore() {
+      if (shareLock) return;
+      shareLock = true;
+      const text = 'I scored ' + Math.floor(state.score) + ' in Cool New Game — can you beat it?';
+      const note = $('share-note');
+      try {
+        if (navigator.share) {
+          try {
+            await navigator.share({ title: 'Cool New Game', text });
+            note.textContent = 'Shared.';
+            return;
+          } catch (err) {
+            if (err && err.name === 'AbortError') return;
+          }
+        }
+        const copied = await copyText(text);
+        if (copied) {
+          note.textContent = 'Copied to clipboard.';
+          toast('Copied to clipboard');
+        } else {
+          note.textContent = text;
+          toast('Select the message below and copy it.');
+        }
+      } finally {
+        shareLock = false;
+      }
+    }
+
+    async function copyText(text) {
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(text);
+          return true;
+        }
+      } catch (err) {
+        /* Fall through to the older copy path. */
+      }
+      try {
+        const area = document.createElement('textarea');
+        area.value = text;
+        area.setAttribute('readonly', '');
+        area.style.position = 'fixed';
+        area.style.left = '-9999px';
+        document.body.appendChild(area);
+        area.select();
+        const ok = document.execCommand('copy');
+        area.remove();
+        return !!ok;
+      } catch (err) {
+        return false;
+      }
+    }
+
+    function moveDir() {
+      let dir = 0;
+      if (keys.has('arrowleft') || keys.has('a')) dir -= 1;
+      if (keys.has('arrowright') || keys.has('d')) dir += 1;
+      return clamp(dir, -1, 1);
+    }
+
+    function toggleUpgrade() {
+      if (state.mode === 'upgrade') {
+        closeOverlay();
+        return;
+      }
+      if (state.mode === 'playing' || state.mode === 'pause') {
+        openOverlay('upgrade');
+        buildUpgrade();
+      }
+    }
+
+    function toggleStore() {
+      if (state.mode === 'store') {
+        closeOverlay();
+        return;
+      }
+      if (state.mode === 'playing' || state.mode === 'pause' || state.mode === 'menu' || state.mode === 'gameover' || state.mode === 'upgrade') {
+        openOverlay('store');
+        buildStore();
+      }
+    }
+
+    function togglePause() {
+      if (!state.runActive) return;
+      if (state.mode === 'pause') closeOverlay();
+      else if (state.mode === 'playing') {
+        openOverlay('pause');
+        setText('pause-stats', pauseLine());
+      }
+    }
+
+    function onEscape() {
+      if (state.mode === 'upgrade' || state.mode === 'store' || state.mode === 'pause') closeOverlay();
+      else if (state.mode === 'playing') togglePause();
+    }
+
+    function onEnter() {
+      if (state.mode === 'menu' || state.mode === 'gameover') startRun();
+      else if (state.mode === 'pause') closeOverlay();
+    }
+
+    function onKeyDown(e) {
+      const key = e.key.toLowerCase();
+      if (e.code === 'Space') e.preventDefault();
+      if (key.indexOf('arrow') === 0 && state.mode === 'playing') e.preventDefault();
+      keys.add(key);
+      if (e.code === 'Space') keys.add(' ');
+      if (e.repeat) return;
+      audio.ensure();
+      if (key === 'm') { toggleMute(); return; }
+      if (key === 'u') { toggleUpgrade(); return; }
+      if (key === 'b') { toggleStore(); return; }
+      if (key === 'p') { togglePause(); return; }
+      if (key === 'escape') { onEscape(); return; }
+      if (key === 'enter') {
+        if (e.target && e.target.closest && e.target.closest('button, a, input, label')) return;
+        onEnter();
+        return;
+      }
+      if (state.mode === 'upgrade') {
+        if (key === '1') doDivide();
+        else if (key === '2') doMultiply('damage');
+        else if (key === '3') doMultiply('rate');
+        else if (key === '4') doSubtract();
+        else if (key === '5') doTank();
+      }
+    }
+
+    function onKeyUp(e) {
+      keys.delete(e.key.toLowerCase());
+      if (e.code === 'Space') keys.delete(' ');
+    }
+
+    function bindUi() {
+      $('btn-play').addEventListener('click', startRun);
+      $('btn-menu-store').addEventListener('click', toggleStore);
+      $('btn-menu-mute').addEventListener('click', toggleMute);
+      $('btn-mute').addEventListener('click', toggleMute);
+      $('btn-upgrade').addEventListener('click', toggleUpgrade);
+      $('btn-store').addEventListener('click', toggleStore);
+      $('btn-pause').addEventListener('click', togglePause);
+      $('btn-resume').addEventListener('click', () => closeOverlay());
+      $('btn-pause-upgrades').addEventListener('click', toggleUpgrade);
+      $('btn-pause-store').addEventListener('click', toggleStore);
+      $('btn-end-run').addEventListener('click', gameOver);
+      $('btn-upgrade-close').addEventListener('click', closeOverlay);
+      $('btn-store-close').addEventListener('click', closeOverlay);
+      $('btn-share').addEventListener('click', shareScore);
+      $('btn-retry').addEventListener('click', startRun);
+      $('btn-over-store').addEventListener('click', toggleStore);
+      $('btn-over-menu').addEventListener('click', goMenu);
+      $('btn-restore').addEventListener('click', async () => {
+        const result = await Commerce.restore();
+        if (!result || result.status === 'iap_unavailable') {
+          toast('Restore purchases is not available in this browser build (iap_unavailable).');
+        } else if (result.status === 'success') {
+          toast('Purchases restored.');
+          buildStore();
+        } else {
+          toast('Restore failed.');
+        }
+      });
+
+      $('menu-weapons').addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-weapon]');
+        if (!btn || btn.disabled) return;
+        Save.data.loadout.weapon = btn.dataset.weapon;
+        Save.persist();
+        buildMenu();
+        audio.ui();
+      });
+      $('menu-skins').addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-skin]');
+        if (!btn || btn.disabled) return;
+        Save.data.loadout.skin = btn.dataset.skin;
+        Save.persist();
+        buildMenu();
+        audio.ui();
+      });
+      $('menu-tank').addEventListener('change', (e) => {
+        const box = e.target.closest('input');
+        if (!box) return;
+        Save.data.loadout.useTank = !!(box.checked && Save.data.unlocks.tank);
+        Save.persist();
+      });
+      $('upgrade-list').addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-action]');
+        if (!btn || btn.disabled) return;
+        const action = btn.dataset.action;
+        if (action === 'divide') doDivide();
+        else if (action === 'multiply-damage') doMultiply('damage');
+        else if (action === 'multiply-rate') doMultiply('rate');
+        else if (action === 'subtract') doSubtract();
+        else if (action === 'tank') doTank();
+        else if (action === 'dismount') doDismount();
+      });
+      $('store-list').addEventListener('click', async (e) => {
+        const buy = e.target.closest('[data-buy]');
+        if (buy) {
+          if (purchaseLock) return;
+          purchaseLock = true;
+          try {
+            const result = await Commerce.purchase(buy.dataset.buy);
+            announcePurchase(result);
+            if (state.mode === 'store') buildStore();
+            updateHud();
+          } finally {
+            purchaseLock = false;
+          }
+          return;
+        }
+        const weapon = e.target.closest('[data-equip-weapon]');
+        if (weapon) equipWeapon(weapon.dataset.equipWeapon);
+        const skin = e.target.closest('[data-equip-skin]');
+        if (skin) equipSkin(skin.dataset.equipSkin);
+      });
+
+      window.addEventListener('keydown', onKeyDown);
+      window.addEventListener('keyup', onKeyUp);
+      window.addEventListener('blur', () => keys.clear());
+      window.addEventListener('resize', resize);
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden && state.mode === 'playing') {
+          openOverlay('pause');
+          setText('pause-stats', pauseLine());
+        }
+      });
+    }
+
+    function update(dt) {
+      tickToast(dt);
+      if (state.mode === 'playing' || state.mode === 'menu') state.time += dt;
+      if (state.mode === 'playing') {
+        simulate(dt);
+        updateHud();
+      }
+    }
+
+    let lastTs = 0;
+    function frame(ts) {
+      requestAnimationFrame(frame);
+      if (!lastTs) {
+        lastTs = ts;
+        return;
+      }
+      const dt = Math.min(0.05, (ts - lastTs) / 1000);
+      lastTs = ts;
+      update(dt);
+      render();
+    }
+
+    function boot() {
+      if (!ctx) throw new Error('Canvas 2D is not available.');
+      Save.load();
+      Commerce.setBridge({
+        addLife() {
+          if (lifeBlockReason()) return false;
+          state.lives += 1;
+          state.livesBought += 1;
+          return true;
+        },
+        equipWeapon(id) {
+          if (state.runActive && !state.tankDeployed) state.weaponId = id;
+        },
+        equipSkin(id) {
+          if (state.runActive) state.skinId = id;
+        },
+        onTroopMultiplier() {
+          if (state.runActive && !state.tankDeployed && state.troops < 2) state.troops = 2;
+        },
+        onTankPurchased() {
+          Save.data.loadout.useTank = true;
+          if (state.runActive && !state.tankDeployed) {
+            state.tankDeployed = true;
+            state.tankArmor = TANK_ARMOR_MAX;
+            state.armorTimer = 0;
+          }
+        },
+        onWalletChanged() {
+          updateHud();
+          if (state.mode === 'menu') {
+            setText('menu-gems', 'Gems: ' + fmt(Save.data.gems));
+          }
+          if (state.mode === 'store') buildStore();
+        }
+      });
+      const daily = Commerce.grantReward(DAILY_ID, { source: 'daily' });
+      if (daily.ok && daily.newly) state.menuNote = 'Daily reward: +20 gems';
+      bindUi();
+      buildMenu();
+      syncMuteButtons();
+      syncScreens();
+      resize();
+      requestAnimationFrame(frame);
+    }
+
+    window.CoolNewGame = {
+      version: 1,
+      catalog: PRODUCT_CATALOG,
+      Commerce,
+      setIapAdapter: (adapter) => Commerce.setIapAdapter(adapter),
+      getIapAdapter: () => Commerce.adapter
+    };
+
+    try {
+      boot();
+    } catch (err) {
+      console.error(err);
+      const pre = document.createElement('pre');
+      pre.textContent = String(err && err.stack || err);
+      pre.style.cssText = 'position:absolute;inset:0;z-index:9;margin:0;padding:12px;background:#3a1010;color:#fff;overflow:auto;white-space:pre-wrap;';
+      $('stage').appendChild(pre);
+    }
+  </script>
+</body>
+</html>
